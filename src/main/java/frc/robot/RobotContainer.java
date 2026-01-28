@@ -1,6 +1,11 @@
 package frc.robot;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.FollowPathCommand;
+
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
@@ -29,6 +34,9 @@ public class RobotContainer {
     /* Subsystems */
     private final Swerve swerve = new Swerve();
 
+        /* ✅ SendableChooser for Autonomous Selection */
+    private final SendableChooser<Command> chooser;
+
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer() {
         swerve.setDefaultCommand(
@@ -42,7 +50,13 @@ public class RobotContainer {
         );
 
         configureButtonBindings();
+
+        FollowPathCommand.warmupCommand().schedule();
+         chooser = AutoBuilder.buildAutoChooser("Tests");
+        SmartDashboard.putData("Auto Mode", chooser);
     }
+
+    
 
     /**
      * Use this method to define your button->command mappings.
@@ -56,11 +70,14 @@ public class RobotContainer {
      * Use this to pass the autonomous command to the main Robot class.
      * @return the command to run in autonomous
      */
-    public Command getAutonomousCommand() {
+   /*  public Command getAutonomousCommand() {
         // TODO: Implement autonomous command
         return new InstantCommand();
-    }
+    }*/
 
+     public Command getAutonomousCommand() {
+        return chooser.getSelected();
+    }
     /**
      * Get the swerve subsystem for use elsewhere.
      * @return The Swerve subsystem

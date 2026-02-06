@@ -65,9 +65,9 @@ public final class Constants {
 
         /* Swerve Profiling Values */
         /* Kraken X60 with MK4i L1 - theoretical max ~4.5 m/s */
-        public static final double maxSpeed = 4.5; // meters per second
+        public static final double maxSpeed = 6; // meters per second
         public static final double maxAngularVelocity = 10.0; // radians per second
-
+ 
         /* Neutral Modes */
         public static final NeutralModeValue angleNeutralMode = NeutralModeValue.Coast;
         public static final NeutralModeValue driveNeutralMode = NeutralModeValue.Brake;
@@ -78,7 +78,7 @@ public final class Constants {
             public static final int driveMotorID = 8;
             public static final int angleMotorID = 3;
             public static final int canCoderID = 34;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(108);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(119);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -88,7 +88,7 @@ public final class Constants {
             public static final int driveMotorID = 2;
             public static final int angleMotorID = 4;
             public static final int canCoderID = 31;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(212);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(222);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -98,7 +98,7 @@ public final class Constants {
             public static final int driveMotorID = 7;
             public static final int angleMotorID = 5;
             public static final int canCoderID = 33;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(365);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(19);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -108,9 +108,44 @@ public final class Constants {
             public static final int driveMotorID = 6;
             public static final int angleMotorID = 1;
             public static final int canCoderID = 32;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(131);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(141);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
+    }
+
+    public static final class Flywheel {
+        public static final int motorID = 9; // TODO: Set your flywheel motor CAN ID
+        public static final int motor2ID = 10; // TODO: Set your second flywheel motor CAN ID
+
+        /* Motor Invert */
+        public static final InvertedValue motorInvert = InvertedValue.CounterClockwise_Positive;
+        public static final InvertedValue motor2Invert = InvertedValue.CounterClockwise_Positive; // TODO: Adjust if needed
+
+        /* Neutral Mode */
+        public static final NeutralModeValue neutralMode = NeutralModeValue.Coast;
+
+        /* Current Limiting */
+        public static final int supplyCurrentLimit = 40;
+        public static final int statorCurrentLimit = 80;
+        public static final boolean enableCurrentLimit = true;
+
+        /* PID Values for Velocity Control (Slot 0) */
+        public static final double kP = 0.1;
+        public static final double kI = 0.0;
+        public static final double kD = 0.0;
+        public static final double kS = 0.0; // Static friction compensation
+        public static final double kV = 0.12; // Velocity feedforward
+
+        /* PID Values for Position Control (Slot 1) */
+        public static final double positionKP = 1.0; // TODO: Tune this value
+        public static final double positionKI = 0.0;
+        public static final double positionKD = 0.0;
+
+        /* Velocity Tolerance for atTargetVelocity check (rotations per second) */
+        public static final double velocityTolerance = 2.0;
+
+        /* Position Tolerance (rotations) */
+        public static final double positionTolerance = 0.1;
     }
 }

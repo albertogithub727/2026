@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.TeleopSwerve;
+import frc.robot.subsystems.Flywheel;
 import frc.robot.subsystems.Swerve;
 
 /**
@@ -30,9 +31,16 @@ public class RobotContainer {
     /* Driver Buttons */
     private final JoystickButton zeroGyro = new JoystickButton(driver, XboxController.Button.kY.value);
     private final JoystickButton robotCentric = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
+    private final JoystickButton feederButton = new JoystickButton(driver, XboxController.Button.kB.value);
+    private final JoystickButton feederButton2 = new JoystickButton(driver, XboxController.Button.kA.value);
+    private final JoystickButton toggleMotor2Button = new JoystickButton(driver, XboxController.Button.kX.value);
+
+    
 
     /* Subsystems */
     private final Swerve swerve = new Swerve();
+    private final Flywheel Flywheel = new Flywheel();
+    
 
         /* ✅ SendableChooser for Autonomous Selection */
     private final SendableChooser<Command> chooser;
@@ -52,7 +60,7 @@ public class RobotContainer {
         configureButtonBindings();
 
         FollowPathCommand.warmupCommand().schedule();
-         chooser = AutoBuilder.buildAutoChooser("Tests");
+         chooser = AutoBuilder.buildAutoChooser("New Auto");
         SmartDashboard.putData("Auto Mode", chooser);
     }
 
@@ -64,6 +72,13 @@ public class RobotContainer {
     private void configureButtonBindings() {
         /* Driver Buttons */
         zeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
+        feederButton.onTrue(new InstantCommand(() -> Flywheel.setVelocity2(2000)));
+        feederButton.onFalse(new InstantCommand(() -> Flywheel.setVelocity2(0)));
+        feederButton2.onTrue(new InstantCommand(() -> Flywheel.setVelocity2(-2000)));
+        feederButton2.onFalse(new InstantCommand(() -> Flywheel.setVelocity2(0)));
+
+        // Toggle motor 1 position: 5 rotations forward, then 5 rotations back
+        toggleMotor2Button.onTrue(new InstantCommand(() -> Flywheel.toggleMotor1Position(-7.25)));
     }
 
     /**

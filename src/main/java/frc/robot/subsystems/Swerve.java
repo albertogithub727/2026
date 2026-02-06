@@ -1,7 +1,13 @@
 package frc.robot.subsystems;
 
+import java.util.Optional;
+
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.Pigeon2;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -11,6 +17,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -43,7 +51,60 @@ public class Swerve extends SubsystemBase {
 
         field = new Field2d();
         SmartDashboard.putData("Field", field);
+
+        setupPathPlanner();
     }
+
+    public void setupPathPlanner() {  
+    try {
+        RobotConfig config;
+      config = RobotConfig.fromGUISettings();
+          // Configure AutoBuilder for holonomic drive
+          AutoBuilder.configure(
+            this::getPose,
+            // Robot pose supplier
+            this::resetPose,
+            // Method to reset odometry (will be called if your auto has a starting pose)
+            this::getSpeeds,    
+            // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+            (speedsRobotRelative, moduleFeedForwards) -> {
+                SwerveModuleState[] moduleStates = Constants.Swerve.swerveKinematics.toSwerveModuleStates(speedsRobotRelative);
+                SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, Constants.Swerve.maxSpeed);
+                setModuleStates(moduleStates);
+            },
+            // Method that will drive the robot given ROB2OT RELATIVE ChassisSpeeds. Also
+            // optionally outputs individual module feedforwards
+            new PPHolonomicDriveController(
+                // PPHolonomicController is the built in path following controller for holonomic
+                // drive trains
+                new PIDConstants(5.0, 0.0, 0.0),
+                // Translation PID constants
+                new PIDConstants(5.0, 0.0, 0.0)
+            // Rotation PID constants
+            ),
+            config,
+            () -> {
+                // Boolean supplier that controls when the path will be mirrored for the red
+                // alliance
+                // This will flip the path being followed to the red side of the field.
+                // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+
+                Optional<Alliance> alliance = DriverStation.getAlliance();
+                if (alliance.isPresent()) {
+                    return alliance.get() == DriverStation.Alliance.Red;
+                }
+                return false;
+            },
+            this
+        // Reference to this subsystem to set requirements
+        ); } catch (Exception e) {
+      // Handle exception as needed
+      e.printStackTrace();
+    }
+
+    // Preload PathPlanner Path finding
+    // IF USING CUSTOM PATHFINDER ADD BEFORE THIS LINE
+        }
 
     /**
      * Primary method for controlling the drivetrain.
@@ -157,6 +218,10 @@ public class Swerve extends SubsystemBase {
     public Rotation2d getGyroYaw() {
         return Rotation2d.fromDegrees(gyro.getYaw().getValueAsDouble());
     }
+
+     public ChassisSpeeds getSpeeds() {
+        return Constants.Swerve.swerveKinematics.toChassisSpeeds(getModuleStates());
+      }
 
     /**
      * Zero the gyro.

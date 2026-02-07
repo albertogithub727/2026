@@ -9,8 +9,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.TeleopSwerve;
 import frc.robot.subsystems.Flywheel;
+import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Swerve;
 
 /**
@@ -34,15 +36,16 @@ public class RobotContainer {
     private final JoystickButton feederButton = new JoystickButton(driver, XboxController.Button.kB.value);
     private final JoystickButton feederButton2 = new JoystickButton(driver, XboxController.Button.kA.value);
     private final JoystickButton toggleMotor2Button = new JoystickButton(driver, XboxController.Button.kX.value);
-
     
+    /* Left Trigger for Intake - defined in configureButtonBindings() */
 
     /* Subsystems */
     private final Swerve swerve = new Swerve();
     private final Flywheel Flywheel = new Flywheel();
+    private final Intake intake = new Intake();
     
 
-        /* ✅ SendableChooser for Autonomous Selection */
+    /* ✅ SendableChooser for Autonomous Selection */
     private final SendableChooser<Command> chooser;
 
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -60,7 +63,7 @@ public class RobotContainer {
         configureButtonBindings();
 
         FollowPathCommand.warmupCommand().schedule();
-         chooser = AutoBuilder.buildAutoChooser("New Auto");
+        chooser = AutoBuilder.buildAutoChooser("New Auto");
         SmartDashboard.putData("Auto Mode", chooser);
     }
 
@@ -72,6 +75,8 @@ public class RobotContainer {
     private void configureButtonBindings() {
         /* Driver Buttons */
         zeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
+        
+        /* Flywheel Controls */
         feederButton.onTrue(new InstantCommand(() -> Flywheel.setVelocity2(2000)));
         feederButton.onFalse(new InstantCommand(() -> Flywheel.setVelocity2(0)));
         feederButton2.onTrue(new InstantCommand(() -> Flywheel.setVelocity2(-2000)));
@@ -79,25 +84,34 @@ public class RobotContainer {
 
         // Toggle motor 1 position: 5 rotations forward, then 5 rotations back
         toggleMotor2Button.onTrue(new InstantCommand(() -> Flywheel.toggleMotor1Position(-7.25)));
+
+        /* Intake Control - Left Trigger */
+        new Trigger(() -> driver.getLeftTriggerAxis() > 0.1)
+            .whileTrue(new InstantCommand(() -> intake.intake(), intake))
+            .onFalse(new InstantCommand(() -> intake.stop(), intake));
     }
 
     /**
      * Use this to pass the autonomous command to the main Robot class.
      * @return the command to run in autonomous
      */
-   /*  public Command getAutonomousCommand() {
-        // TODO: Implement autonomous command
-        return new InstantCommand();
-    }*/
-
-     public Command getAutonomousCommand() {
+    public Command getAutonomousCommand() {
         return chooser.getSelected();
     }
+    
     /**
      * Get the swerve subsystem for use elsewhere.
      * @return The Swerve subsystem
      */
     public Swerve getSwerve() {
         return swerve;
+    }
+
+    /**
+     * Get the intake subsystem for use elsewhere.
+     * @return The Intake subsystem
+     */
+    public Intake getIntake() {
+        return intake;
     }
 }

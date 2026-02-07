@@ -57,6 +57,11 @@ public class Flywheel extends SubsystemBase {
 
         flywheelMotor.optimizeBusUtilization();
         flywheelMotor2.optimizeBusUtilization();
+
+        // Zero motor positions and stop to prevent movement on enable
+        flywheelMotor.setPosition(0);
+        flywheelMotor2.setPosition(0);
+        stop();
     }
 
     private void configMotor(TalonFX motor, InvertedValue invert) {

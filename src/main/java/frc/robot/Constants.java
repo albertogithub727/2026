@@ -78,7 +78,7 @@ public final class Constants {
             public static final int driveMotorID = 8;
             public static final int angleMotorID = 3;
             public static final int canCoderID = 34;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(119);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(106);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -88,7 +88,7 @@ public final class Constants {
             public static final int driveMotorID = 2;
             public static final int angleMotorID = 4;
             public static final int canCoderID = 31;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(222);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(210);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -98,7 +98,7 @@ public final class Constants {
             public static final int driveMotorID = 7;
             public static final int angleMotorID = 5;
             public static final int canCoderID = 33;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(19);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(5);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -108,7 +108,7 @@ public final class Constants {
             public static final int driveMotorID = 6;
             public static final int angleMotorID = 1;
             public static final int canCoderID = 32;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(321);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(250);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -134,15 +134,20 @@ public final class Constants {
         public static final boolean enableCurrentLimit = true;
 
         /* Shooter Speed (duty cycle, -1.0 to 1.0) */
-        public static final double shooterSpeed = .6    ;
+        public static final double shooterSpeed = .9    ;
         public static final double feederSpeed = 1.0;
 
         /* Delay before feeder starts (seconds) */
-        public static final double feederDelay = 1.0;
+        public static final double feederDelay = 1.75;
 
         /* Agitator (angle motor shake) */
         public static final double agitateAmplitude = 10.0; // degrees of oscillation
         public static final double agitateFrequency = 30.0; // Hz
+
+        /* Intake bop during shooting (dislodge stuck balls) */
+        public static final double intakeBopDelay = 1.0; // seconds before bop starts
+        public static final double intakeBopInterval = 0.3; // seconds between each direction switch
+        public static final double intakeBopSpeed = 0.17; // duty cycle for bop
     }
 
     public static final class Flywheel {
@@ -182,5 +187,23 @@ public final class Constants {
         /* Motion Magic (for smooth position moves) */
         public static final double motionMagicCruiseVelocity = 40; // rotations per second
         public static final double motionMagicAcceleration = 35; // rotations per second^2
+    }
+
+    public static final class Climb {
+        public static final int motorID = 14;
+
+        /* Motor Invert */
+        public static final InvertedValue motorInvert = InvertedValue.CounterClockwise_Positive;
+
+        /* Neutral Mode */
+        public static final NeutralModeValue neutralMode = NeutralModeValue.Brake;
+
+        /* Current Limiting */
+        public static final int supplyCurrentLimit = 40;
+        public static final int statorCurrentLimit = 80;
+        public static final boolean enableCurrentLimit = true;
+
+        /* Climb Speed (duty cycle, -1.0 to 1.0) */
+        public static final double climbSpeed = 1.0;
     }
 }

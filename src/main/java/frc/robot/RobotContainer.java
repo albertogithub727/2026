@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.MoveActuator;
 import frc.robot.commands.ShootCommand;
 import frc.robot.commands.TeleopSwerve;
+import frc.robot.subsystems.Climb;
 import frc.robot.subsystems.Flywheel;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.LinearActuatorPWM;
@@ -51,6 +52,7 @@ public class RobotContainer {
     private final Intake intake = new Intake();
     private final LinearActuatorPWM linearActuator = new LinearActuatorPWM();
     private final Shooter shooter = new Shooter();
+    private final Climb climb = new Climb();
 
     /* SendableChooser for Autonomous Selection */
     private final SendableChooser<Command> chooser;
@@ -114,14 +116,37 @@ public class RobotContainer {
         // Releases automatically when button is released
         retractActuator.whileTrue(new MoveActuator(linearActuator, false));
 
-        /* Intake Control - Left Trigger */
+        /* Intake Control - Left Trigger (65%) */
         new Trigger(() -> driver2.getLeftTriggerAxis() > 0.1)
             .whileTrue(new InstantCommand(() -> intake.intake(), intake))
             .onFalse(new InstantCommand(() -> intake.stop(), intake));
 
+        /* Intake Control - D-Pad Up (100%) */
+        new Trigger(() -> driver2.getPOV() == 0)
+            .whileTrue(new StartEndCommand(
+                () -> intake.setPercent(-1.0),
+                () -> intake.stop(),
+                intake
+            ));
+
         /* Shooter Control - Right Trigger */
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
-            .whileTrue(new ShootCommand(shooter, swerve, Flywheel));
+            .whileTrue(new ShootCommand(shooter, Flywheel));
+
+        /* Climb Control - Driver 1 Triggers (hold to move) */
+        new Trigger(() -> driver.getRightTriggerAxis() > 0.1)
+            .whileTrue(new StartEndCommand(
+                () -> climb.climbUp(),
+                () -> climb.stop(),
+                climb
+            ));
+
+        new Trigger(() -> driver.getLeftTriggerAxis() > 0.1)
+            .whileTrue(new StartEndCommand(
+                () -> climb.climbDown(),
+                () -> climb.stop(),
+                climb
+            ));
     }
     /**
      * Use this to pass the autonomous command to the main Robot class.

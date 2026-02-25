@@ -15,6 +15,18 @@
           "data": {
             "pathName": "path 2"
           }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "path 3"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": null
+          }
         }
       ]
     }

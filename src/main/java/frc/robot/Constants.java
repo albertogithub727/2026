@@ -1,8 +1,9 @@
 package frc.robot;
 
-import java.lang.annotation.Target;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import com.ctre.phoenix6.signals.InvertedValue;
+import edu.wpi.first.units.measure.AngularVelocity;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
 
@@ -13,6 +14,10 @@ import edu.wpi.first.math.util.Units;
 
 public final class Constants {
     public static final double stickDeadband = 0.1;
+
+    public static final class KrakenX60 {
+        public static final AngularVelocity kFreeSpeed = RotationsPerSecond.of(100);
+    }
 
     public static final class Swerve {
         public static final int pigeonID = 0; // TODO: Set your Pigeon 2 CAN ID
@@ -134,7 +139,7 @@ public final class Constants {
         public static final boolean enableCurrentLimit = true;
 
         /* Shooter Speed (duty cycle, -1.0 to 1.0) */
-        public static final double shooterSpeed = .9    ;
+        public static final double shooterSpeed = .58;
         public static final double feederSpeed = 1.0;
 
         /* Delay before feeder starts (seconds) */
@@ -146,7 +151,8 @@ public final class Constants {
 
         /* Intake bop during shooting (dislodge stuck balls) */
         public static final double intakeBopDelay = 1.0; // seconds before bop starts
-        public static final double intakeBopInterval = 0.3; // seconds between each direction switch
+        public static final double intakeBopInterval = 0.5
+        ; // seconds between each direction switch
         public static final double intakeBopSpeed = 0.17; // duty cycle for bop
     }
 

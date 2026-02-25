@@ -26,7 +26,7 @@ public class ShootCommand extends Command {
         lastBopTime = 0.0;
         bopDirectionPositive = true;
         startingPosition = flywheel.getPosition1();
-        shooter.runShooterMotors(Constants.Shooter.shooterSpeed);
+        shooter.setPercentOutput(Constants.Shooter.shooterSpeed);
     }
 
     @Override

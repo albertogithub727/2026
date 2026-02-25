@@ -1,77 +1,160 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
+
+import java.util.List;
+
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
+import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.Constants.KrakenX60;
+import frc.robot.Ports;
 
 public class Shooter extends SubsystemBase {
-    private final TalonFX motor1;
-    private final TalonFX motor2;
-    private final TalonFX motor3;
-    private final TalonFX feeder;
+    private static final AngularVelocity kVelocityTolerance = RPM.of(100);
 
-    private final DutyCycleOut dutyCycle1 = new DutyCycleOut(0);
-    private final DutyCycleOut dutyCycle2 = new DutyCycleOut(0);
-    private final DutyCycleOut dutyCycle3 = new DutyCycleOut(0);
+    private final TalonFX leftMotor, middleMotor, rightMotor;
+    private final TalonFX feeder;
+    private final List<TalonFX> shooterMotors;
+    private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
+    private final VoltageOut voltageRequest = new VoltageOut(0);
     private final DutyCycleOut feederDutyCycle = new DutyCycleOut(0);
 
+    private double dashboardTargetRPM = 0.0;
+
     public Shooter() {
-        motor1 = new TalonFX(Constants.Shooter.motor1ID);
-        motor2 = new TalonFX(Constants.Shooter.motor2ID);
-        motor3 = new TalonFX(Constants.Shooter.motor3ID);
-        feeder = new TalonFX(Constants.Shooter.feederID);
+        leftMotor = new TalonFX(Ports.kShooterLeft, Ports.kRoboRioCANBus);
+        middleMotor = new TalonFX(Ports.kShooterMiddle, Ports.kRoboRioCANBus);
+        rightMotor = new TalonFX(Ports.kShooterRight, Ports.kRoboRioCANBus);
+        feeder = new TalonFX(Ports.kShooterFeeder, Ports.kRoboRioCANBus);
+        shooterMotors = List.of(leftMotor, middleMotor, rightMotor);
 
-        configMotor(motor1, Constants.Shooter.motor1Invert, Constants.Shooter.neutralMode);
-        configMotor(motor2, Constants.Shooter.motorInvert, Constants.Shooter.neutralMode);
-        configMotor(motor3, Constants.Shooter.motorInvert, Constants.Shooter.neutralMode);
-        configMotor(feeder, Constants.Shooter.feederInvert, Constants.Shooter.neutralMode);
+        configureShooterMotor(leftMotor, InvertedValue.Clockwise_Positive);
+        configureShooterMotor(middleMotor, InvertedValue.CounterClockwise_Positive);
+        configureShooterMotor(rightMotor, InvertedValue.CounterClockwise_Positive);
+        configureFeederMotor();
 
-        motor1.optimizeBusUtilization();
-        motor2.optimizeBusUtilization();
-        motor3.optimizeBusUtilization();
-        feeder.optimizeBusUtilization();
+        SmartDashboard.putData(this);
     }
 
-    private void configMotor(TalonFX motor, InvertedValue invert, NeutralModeValue neutralMode) {
-        TalonFXConfiguration config = new TalonFXConfiguration();
-
-        config.MotorOutput.Inverted = invert;
-        config.MotorOutput.NeutralMode = neutralMode;
-
-        config.CurrentLimits.SupplyCurrentLimitEnable = Constants.Shooter.enableCurrentLimit;
-        config.CurrentLimits.SupplyCurrentLimit = Constants.Shooter.supplyCurrentLimit;
-        config.CurrentLimits.StatorCurrentLimitEnable = Constants.Shooter.enableCurrentLimit;
-        config.CurrentLimits.StatorCurrentLimit = Constants.Shooter.statorCurrentLimit;
+    private void configureShooterMotor(TalonFX motor, InvertedValue invertDirection) {
+        final TalonFXConfiguration config = new TalonFXConfiguration()
+            .withMotorOutput(
+                new MotorOutputConfigs()
+                    .withInverted(invertDirection)
+                    .withNeutralMode(NeutralModeValue.Coast)
+            )
+            .withCurrentLimits(
+                new CurrentLimitsConfigs()
+                    .withStatorCurrentLimit(Amps.of(120))
+                    .withStatorCurrentLimitEnable(true)
+                    .withSupplyCurrentLimit(Amps.of(70))
+                    .withSupplyCurrentLimitEnable(true)
+            )
+            .withSlot0(
+                new Slot0Configs()
+                    .withKP(0.5)
+                    .withKI(2)
+                    .withKD(0)
+                    .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))
+            );
 
         motor.getConfigurator().apply(config);
     }
 
-    public void runShooterMotors(double speed) {
-        motor1.setControl(dutyCycle1.withOutput(speed));
-        motor2.setControl(dutyCycle2.withOutput(speed));
-        motor3.setControl(dutyCycle3.withOutput(speed));
+    private void configureFeederMotor() {
+        final TalonFXConfiguration config = new TalonFXConfiguration()
+            .withMotorOutput(
+                new MotorOutputConfigs()
+                    .withInverted(Constants.Shooter.feederInvert)
+                    .withNeutralMode(NeutralModeValue.Coast)
+            )
+            .withCurrentLimits(
+                new CurrentLimitsConfigs()
+                    .withStatorCurrentLimit(Amps.of(80))
+                    .withStatorCurrentLimitEnable(true)
+                    .withSupplyCurrentLimit(Amps.of(40))
+                    .withSupplyCurrentLimitEnable(true)
+            );
+
+        feeder.getConfigurator().apply(config);
+    }
+
+    public void setRPM(double rpm) {
+        for (final TalonFX motor : shooterMotors) {
+            motor.setControl(velocityRequest.withVelocity(RPM.of(rpm)));
+        }
+    }
+
+    public void setPercentOutput(double percentOutput) {
+        for (final TalonFX motor : shooterMotors) {
+            motor.setControl(voltageRequest.withOutput(Volts.of(percentOutput * 12.0)));
+        }
     }
 
     public void runFeeder(double speed) {
         feeder.setControl(feederDutyCycle.withOutput(speed));
     }
 
+    public void stop() {
+        setPercentOutput(0.0);
+    }
+
     public void stopAll() {
-        motor1.setControl(dutyCycle1.withOutput(0));
-        motor2.setControl(dutyCycle2.withOutput(0));
-        motor3.setControl(dutyCycle3.withOutput(0));
-        feeder.setControl(feederDutyCycle.withOutput(0));
+        stop();
+        runFeeder(0);
+    }
+
+    public Command spinUpCommand(double rpm) {
+        return runOnce(() -> setRPM(rpm))
+            .andThen(Commands.waitUntil(this::isVelocityWithinTolerance));
+    }
+
+    public Command dashboardSpinUpCommand() {
+        return defer(() -> spinUpCommand(dashboardTargetRPM));
+    }
+
+    public boolean isVelocityWithinTolerance() {
+        return shooterMotors.stream().allMatch(motor -> {
+            final boolean isInVelocityMode = motor.getAppliedControl().equals(velocityRequest);
+            final AngularVelocity currentVelocity = motor.getVelocity().getValue();
+            final AngularVelocity targetVelocity = velocityRequest.getVelocityMeasure();
+            return isInVelocityMode && currentVelocity.isNear(targetVelocity, kVelocityTolerance);
+        });
+    }
+
+    private void initSendable(SendableBuilder builder, TalonFX motor, String name) {
+        builder.addDoubleProperty(name + " RPM", () -> motor.getVelocity().getValue().in(RPM), null);
+        builder.addDoubleProperty(name + " Stator Current", () -> motor.getStatorCurrent().getValue().in(Amps), null);
+        builder.addDoubleProperty(name + " Supply Current", () -> motor.getSupplyCurrent().getValue().in(Amps), null);
     }
 
     @Override
-    public void periodic() {
-        SmartDashboard.putNumber("Shooter/Motor1 Output", motor1.getDutyCycle().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Feeder Output", feeder.getDutyCycle().getValueAsDouble());
+    public void initSendable(SendableBuilder builder) {
+        initSendable(builder, leftMotor, "Left");
+        initSendable(builder, middleMotor, "Middle");
+        initSendable(builder, rightMotor, "Right");
+        builder.addStringProperty("Command", () -> getCurrentCommand() != null ? getCurrentCommand().getName() : "null", null);
+        builder.addDoubleProperty("Dashboard RPM", () -> dashboardTargetRPM, value -> dashboardTargetRPM = value);
+        builder.addDoubleProperty("Target RPM", () -> velocityRequest.getVelocityMeasure().in(RPM), null);
+        builder.addDoubleProperty("Feeder Output", () -> feeder.getDutyCycle().getValueAsDouble(), null);
     }
 }

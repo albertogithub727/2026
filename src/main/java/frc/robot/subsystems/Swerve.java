@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.LimelightHelpers;
 
 public class Swerve extends SubsystemBase {
     private final Pigeon2 gyro;
@@ -266,10 +267,25 @@ public class Swerve extends SubsystemBase {
         return agitating;
     }
 
+    private void updateVisionPose() {
+        LimelightHelpers.PoseEstimate estimate =
+            LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
+
+        if (estimate == null || estimate.tagCount == 0) {
+            return;
+        }
+
+        poseEstimator.addVisionMeasurement(estimate.pose, estimate.timestampSeconds);
+    }
+
     @Override
     public void periodic() {
-        // Update pose estimator
+        // Update pose estimator with odometry
         poseEstimator.update(getGyroYaw(), getModulePositions());
+
+        // Update pose estimator with Limelight vision
+        updateVisionPose();
+
         field.setRobotPose(getPose());
 
         // Log data to SmartDashboard

@@ -1,14 +1,14 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.LinearActuatorPWM;
+import frc.robot.subsystems.Hood;
 
 /**
  * Command to continuously move the actuator while held.
  * Gradually increases or decreases position for smooth control.
  */
 public class MoveActuator extends Command {
-    private final LinearActuatorPWM actuator;
+    private final Hood actuator;
     private final boolean extending; // true = extend, false = retract
     
     // How much to change position per cycle (0.02 = 2% per 20ms)
@@ -21,7 +21,7 @@ public class MoveActuator extends Command {
      * @param actuator The actuator subsystem
      * @param extending True to extend, false to retract
      */
-    public MoveActuator(LinearActuatorPWM actuator, boolean extending) {
+    public MoveActuator(Hood actuator, boolean extending) {
         this.actuator = actuator;
         this.extending = extending;
         addRequirements(actuator);

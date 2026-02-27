@@ -74,7 +74,7 @@ public final class Constants {
         public static final double maxAngularVelocity = 10.0; // radians per second
  
         /* Neutral Modes */
-        public static final NeutralModeValue angleNeutralMode = NeutralModeValue.Coast;
+        public static final NeutralModeValue angleNeutralMode = NeutralModeValue.Brake;
         public static final NeutralModeValue driveNeutralMode = NeutralModeValue.Brake;
 
         /* Module Specific Constants */
@@ -83,7 +83,7 @@ public final class Constants {
             public static final int driveMotorID = 8;
             public static final int angleMotorID = 3;
             public static final int canCoderID = 34;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(106);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(108);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -93,7 +93,7 @@ public final class Constants {
             public static final int driveMotorID = 2;
             public static final int angleMotorID = 4;
             public static final int canCoderID = 31;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(210);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(215);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -103,7 +103,7 @@ public final class Constants {
             public static final int driveMotorID = 7;
             public static final int angleMotorID = 5;
             public static final int canCoderID = 33;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(5);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(10);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -113,7 +113,7 @@ public final class Constants {
             public static final int driveMotorID = 6;
             public static final int angleMotorID = 1;
             public static final int canCoderID = 32;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(250);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(251);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -138,12 +138,15 @@ public final class Constants {
         public static final int statorCurrentLimit = 80;
         public static final boolean enableCurrentLimit = true;
 
-        /* Shooter Speed (duty cycle, -1.0 to 1.0) */
-        public static final double shooterSpeed = .58;
+        /* Shooter Speed */
+        public static final double shooterSpeed = .57; // duty cycle for reverse/unjam
+        public static final double shooterRPM = 3700; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
+        public static final double shooterSpeedHoodDown = 0.5; // duty cycle for hood preset 0
+        public static final double shooterSpeedHoodUp = 0.8; // duty cycle for hood preset 1
         public static final double feederSpeed = 1.0;
 
         /* Delay before feeder starts (seconds) */
-        public static final double feederDelay = 1.75;
+        public static final double feederDelay = 1.85;
 
         /* Agitator (angle motor shake) */
         public static final double agitateAmplitude = 10.0; // degrees of oscillation

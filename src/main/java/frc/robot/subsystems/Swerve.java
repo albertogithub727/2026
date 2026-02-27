@@ -9,6 +9,7 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
+import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -17,6 +18,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -24,7 +27,6 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.LimelightHelpers;
 
 public class Swerve extends SubsystemBase {
     private final Pigeon2 gyro;
@@ -118,12 +120,12 @@ public class Swerve extends SubsystemBase {
      */
     public void drive(Translation2d translation, double rotation, boolean fieldRelative, boolean isOpenLoop) {
         SwerveModuleState[] swerveModuleStates = Constants.Swerve.swerveKinematics.toSwerveModuleStates(
-            fieldRelative 
+            fieldRelative
                 ? ChassisSpeeds.fromFieldRelativeSpeeds(
-                    translation.getX(), 
-                    translation.getY(), 
-                    rotation, 
-                    getHeading())
+                    translation.getX(),
+                    translation.getY(),
+                    rotation,
+                    getGyroYaw())
                 : new ChassisSpeeds(
                     translation.getX(), 
                     translation.getY(), 
@@ -267,24 +269,14 @@ public class Swerve extends SubsystemBase {
         return agitating;
     }
 
-    private void updateVisionPose() {
-        LimelightHelpers.PoseEstimate estimate =
-            LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
-
-        if (estimate == null || estimate.tagCount == 0) {
-            return;
-        }
-
-        poseEstimator.addVisionMeasurement(estimate.pose, estimate.timestampSeconds);
+    public void addVisionMeasurement(Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> stdDevs) {
+        poseEstimator.addVisionMeasurement(visionPose, timestampSeconds, stdDevs);
     }
 
     @Override
     public void periodic() {
         // Update pose estimator with odometry
         poseEstimator.update(getGyroYaw(), getModulePositions());
-
-        // Update pose estimator with Limelight vision
-        updateVisionPose();
 
         field.setRobotPose(getPose());
 

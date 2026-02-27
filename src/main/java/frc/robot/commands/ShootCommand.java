@@ -9,14 +9,20 @@ import frc.robot.subsystems.Shooter;
 public class ShootCommand extends Command {
     private final Shooter shooter;
     private final Flywheel flywheel;
+    private final Runnable shooterSpeedSetup;
     private final Timer timer = new Timer();
     private double lastBopTime = 0.0;
     private boolean bopDirectionPositive = true;
     private double startingPosition = 0.0;
 
     public ShootCommand(Shooter shooter, Flywheel flywheel) {
+        this(shooter, flywheel, () -> shooter.setRPM(Constants.Shooter.shooterRPM));
+    }
+
+    public ShootCommand(Shooter shooter, Flywheel flywheel, Runnable shooterSpeedSetup) {
         this.shooter = shooter;
         this.flywheel = flywheel;
+        this.shooterSpeedSetup = shooterSpeedSetup;
         addRequirements(shooter);
     }
 
@@ -26,7 +32,7 @@ public class ShootCommand extends Command {
         lastBopTime = 0.0;
         bopDirectionPositive = true;
         startingPosition = flywheel.getPosition1();
-        shooter.setPercentOutput(Constants.Shooter.shooterSpeed);
+        shooterSpeedSetup.run();
     }
 
     @Override

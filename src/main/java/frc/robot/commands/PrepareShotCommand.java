@@ -32,10 +32,10 @@ public class PrepareShotCommand extends Command {
     );
 
     static {
-        // Duty cycle values (0.0 to 1.0) for shooter motors at different distances
-        distanceToShotMap.put(Inches.of(52.0), new Shot(0.70, 0.19));
-        distanceToShotMap.put(Inches.of(114.4), new Shot(0.80, 0.40));
-        distanceToShotMap.put(Inches.of(165.5), new Shot(0.90, 0.48));
+        // RPM values for shooter motors at different distances
+        distanceToShotMap.put(Inches.of(52.0), new Shot(2100, 0.15));
+        distanceToShotMap.put(Inches.of(114.4), new Shot(3000, 0.32));
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4000, 0.38));
     }
 
     private final Shooter shooter;
@@ -63,7 +63,7 @@ public class PrepareShotCommand extends Command {
     public void execute() {
         final Distance distanceToHub = getDistanceToHub();
         final Shot shot = distanceToShotMap.get(distanceToHub);
-        shooter.setPercentOutput(shot.shooterSpeed);
+        shooter.setRPM(shot.shooterSpeed);
         hood.setPosition(shot.hoodPosition);
         SmartDashboard.putNumber("Distance to Hub (inches)", distanceToHub.in(Inches));
     }

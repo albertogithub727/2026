@@ -71,10 +71,10 @@ public class Shooter extends SubsystemBase {
             )
             .withSlot0(
                 new Slot0Configs()
-                    .withKP(0.5)
-                    .withKI(2)
-                    .withKD(0)
-                    .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))
+                    .withKP(2.8)
+                    .withKI(0.5)
+                    .withKD(0.01)
+                    .withKV(12.25 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))
             );
 
         motor.getConfigurator().apply(config);

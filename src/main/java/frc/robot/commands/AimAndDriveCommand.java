@@ -13,20 +13,16 @@ import frc.robot.subsystems.Swerve;
 
 public class AimAndDriveCommand extends Command {
     private static final double kAimToleranceDegrees = 5.0;
-    private static final double kRotationKP = 1.0;
+    private static final double kRotationKP = 0.08;
     private static final double kRotationKI = 0.0;
-    private static final double kRotationKD = 0.0;
+    private static final double kRotationKD = 0.006;
 
     private final Swerve swerve;
     private final DoubleSupplier forwardInput;
     private final DoubleSupplier strafeInput;
     private final PIDController rotationPID;
 
-    public AimAndDriveCommand(
-        Swerve swerve,
-        DoubleSupplier forwardInput,
-        DoubleSupplier strafeInput
-    ) {
+    public AimAndDriveCommand(Swerve swerve, DoubleSupplier forwardInput, DoubleSupplier strafeInput) {
         this.swerve = swerve;
         this.forwardInput = forwardInput;
         this.strafeInput = strafeInput;
@@ -40,14 +36,13 @@ public class AimAndDriveCommand extends Command {
         this(swerve, () -> 0, () -> 0);
     }
 
-    public boolean isAimed() {
-        return rotationPID.atSetpoint();
+    @Override
+    public void initialize() {
+        rotationPID.reset();
     }
 
-    private Rotation2d getDirectionToHub() {
-        Translation2d hubPosition = Landmarks.hubPosition();
-        Translation2d robotPosition = swerve.getPose().getTranslation();
-        return hubPosition.minus(robotPosition).getAngle();
+    public boolean isAimed() {
+        return rotationPID.atSetpoint();
     }
 
     @Override
@@ -55,7 +50,9 @@ public class AimAndDriveCommand extends Command {
         double forward = MathUtil.applyDeadband(forwardInput.getAsDouble(), Constants.stickDeadband);
         double strafe = MathUtil.applyDeadband(strafeInput.getAsDouble(), Constants.stickDeadband);
 
-        Rotation2d targetAngle = getDirectionToHub();
+        Translation2d hubPosition = Landmarks.hubPosition();
+        Translation2d robotPosition = swerve.getPose().getTranslation();
+        Rotation2d targetAngle = hubPosition.minus(robotPosition).getAngle();
         Rotation2d currentAngle = swerve.getHeading();
 
         double rotationOutput = rotationPID.calculate(

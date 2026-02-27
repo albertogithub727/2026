@@ -39,8 +39,8 @@ public class MoveActuator extends Command {
         // Increment or decrement position
         if (extending) {
             targetPosition += POSITION_INCREMENT;
-            if (targetPosition > 1.0) {
-                targetPosition = 1.0;
+            if (targetPosition > 0.57) {
+                targetPosition = 0.57;
             }
         } else {
             targetPosition -= POSITION_INCREMENT;
@@ -64,7 +64,7 @@ public class MoveActuator extends Command {
     public boolean isFinished() {
         // Command runs until button is released or limit reached
         if (extending) {
-            return targetPosition >= 1.0;
+            return targetPosition >= 0.57;
         } else {
             return targetPosition <= 0.0;
         }

@@ -112,7 +112,7 @@ public class SwerveModule {
 
     public SwerveModuleState getState() {
         return new SwerveModuleState(
-            rotationsToMeters(drivePosition.refresh().getValueAsDouble()),
+            rotationsPerSecondToMetersPerSecond(driveVelocity.refresh().getValueAsDouble()),
             getAngle()
         );
     }
@@ -197,6 +197,10 @@ public class SwerveModule {
 
     private double rotationsToMeters(double rotations) {
         return rotations * Constants.Swerve.wheelCircumference;
+    }
+
+    private double rotationsPerSecondToMetersPerSecond(double rotationsPerSecond) {
+        return rotationsPerSecond * Constants.Swerve.wheelCircumference;
     }
 
     private double metersPerSecondToRotationsPerSecond(double metersPerSecond) {

@@ -34,12 +34,6 @@
           "data": {
             "pathName": "OutpostAndDepotTrajectory.2"
           }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "OutpostAndDepotTrajectory.3"
-          }
         }
       ]
     }

@@ -4,6 +4,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
 
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -12,6 +13,7 @@ import java.util.Optional;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
@@ -36,6 +38,8 @@ public class RobotContainer {
     /* Controllers */
     private final XboxController driver = new XboxController(0);
     private final XboxController driver2 = new XboxController(1);
+    private final XboxController singleController = new XboxController(5);
+
 
 
     /* Drive Controls */
@@ -60,6 +64,15 @@ public class RobotContainer {
     // Hood preset - set both actuators to 0.32
     private final JoystickButton hoodPresetButton = new JoystickButton(driver, XboxController.Button.kX.value);
 
+    /* Single Controller Buttons (port 5) */
+    private final JoystickButton singleZeroGyro = new JoystickButton(singleController, XboxController.Button.kY.value);
+    private final JoystickButton singleRobotCentric = new JoystickButton(singleController, XboxController.Button.kBack.value);
+    private final JoystickButton singleReverseAll = new JoystickButton(singleController, XboxController.Button.kB.value);
+    private final JoystickButton singleFeeder = new JoystickButton(singleController, XboxController.Button.kA.value);
+    private final JoystickButton singleIntakeToggle = new JoystickButton(singleController, XboxController.Button.kX.value);
+    private final JoystickButton singleExtendActuator = new JoystickButton(singleController, XboxController.Button.kLeftBumper.value);
+    private final JoystickButton singleRetractActuator = new JoystickButton(singleController, XboxController.Button.kRightBumper.value);
+
     /* Hood Presets */
     private final double[] hoodPresets = {0.0, 0.17, 0.32, 0.57};
     private int hoodPresetIndex = 0;
@@ -67,7 +80,7 @@ public class RobotContainer {
     /* Subsystems */
     private final Swerve swerve = new Swerve();
     private final Limelight limelight = new Limelight("limelight");
-    private final Flywheel Flywheel = new Flywheel();
+    private final Flywheel flywheel = new Flywheel();
     private final Intake intake = new Intake();
     private final Hood hood = new Hood();
     private final Shooter shooter = new Shooter();
@@ -81,10 +94,10 @@ public class RobotContainer {
         swerve.setDefaultCommand(
             new TeleopSwerve(
                 swerve,
-                () -> -driver.getRawAxis(translationAxis),
-                () -> -driver.getRawAxis(strafeAxis),
-                () -> -driver.getRawAxis(rotationAxis),
-                () -> robotCentric.getAsBoolean()
+                () -> -driver.getRawAxis(translationAxis) - singleController.getRawAxis(translationAxis),
+                () -> -driver.getRawAxis(strafeAxis) - singleController.getRawAxis(strafeAxis),
+                () -> -driver.getRawAxis(rotationAxis) - singleController.getRawAxis(rotationAxis),
+                () -> robotCentric.getAsBoolean() || singleRobotCentric.getAsBoolean()
             )
         );
 
@@ -94,7 +107,7 @@ public class RobotContainer {
         registerNamedCommands();
 
         FollowPathCommand.warmupCommand().schedule();
-        chooser = AutoBuilder.buildAutoChooser("New Auto");
+        chooser = AutoBuilder.buildAutoChooser("main");
         SmartDashboard.putData("Auto Mode", chooser);
     }
 
@@ -110,15 +123,45 @@ public class RobotContainer {
 
         // Intake deploy (up/down)
         NamedCommands.registerCommand("IntakeDown",
-            new InstantCommand(() -> { if (!Flywheel.isMotor1Extended()) Flywheel.toggleMotor1Position(-15.25); }));
+            new InstantCommand(() -> { if (!flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(-15.25); }));
         NamedCommands.registerCommand("IntakeUp",
-            new InstantCommand(() -> { if (Flywheel.isMotor1Extended()) Flywheel.toggleMotor1Position(-15.25); }));
+            new InstantCommand(() -> { if (flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(-15.25); }));
 
         // Shooter
-        NamedCommands.registerCommand("Shoot", new ShootCommand(shooter, Flywheel));
+        NamedCommands.registerCommand("Shoot", new ShootCommand(shooter, flywheel));
         NamedCommands.registerCommand("ShooterSpinUp", new StartEndCommand(
             () -> shooter.setPercentOutput(Constants.Shooter.shooterSpeed), () -> shooter.stopAll(), shooter));
-        NamedCommands.registerCommand("ShooterOff", new InstantCommand(() -> shooter.stopAll(), shooter));
+        NamedCommands.registerCommand("ShooterSpinUpRPM",
+            new ShootCommand(shooter, flywheel, () -> shooter.setRPM(Constants.Shooter.shooterRPM)));
+        NamedCommands.registerCommand("ShooterRPMOn", new InstantCommand(() -> shooter.setRPM(Constants.Shooter.autoShooterRPM)));
+        NamedCommands.registerCommand("FeederOn", new FunctionalCommand(
+            // init - start feeder + track
+            () -> {
+                shooter.runFeeder(Constants.Shooter.feederSpeed);
+                flywheel.setVelocity2(-2000);
+            },
+            // execute - intake bop
+            () -> {
+                double elapsed = Timer.getFPGATimestamp() % (Constants.Shooter.intakeBopInterval * 2);
+                double speed = elapsed < Constants.Shooter.intakeBopInterval
+                    ? Constants.Shooter.intakeBopSpeed
+                    : -Constants.Shooter.intakeBopSpeed;
+                flywheel.setPercent1(speed);
+            },
+            // end - stop feeder, track, and intake bop
+            (interrupted) -> {
+                shooter.runFeeder(0);
+                flywheel.setVelocity2(0);
+                flywheel.setPosition1(flywheel.getPosition1());
+            },
+            // isFinished
+            () -> false
+        ));
+        NamedCommands.registerCommand("ShooterOff", new InstantCommand(() -> {
+            shooter.stopAll();
+            flywheel.setVelocity2(0);
+            flywheel.setPosition1(flywheel.getPosition1()); // stop bop and hold position
+        }));
 
         // Prepare shot (auto hood + shooter based on distance)
         NamedCommands.registerCommand("PrepareShot",
@@ -138,12 +181,12 @@ public class RobotContainer {
                 shooter.setPercentOutput(-Constants.Shooter.shooterSpeed);
                 shooter.runFeeder(-Constants.Shooter.feederSpeed);
                 intake.setPercent(0.65);
-                Flywheel.setVelocity2(2000);
+                flywheel.setVelocity2(2000);
             },
             () -> {
                 shooter.stopAll();
                 intake.stop();
-                Flywheel.setVelocity2(0);
+                flywheel.setVelocity2(0);
             },
             shooter, intake));
 
@@ -171,22 +214,22 @@ public class RobotContainer {
                 shooter.setPercentOutput(-Constants.Shooter.shooterSpeed);
                 shooter.runFeeder(-Constants.Shooter.feederSpeed);
                 intake.setPercent(0.65);
-                Flywheel.setVelocity2(2000);
+                flywheel.setVelocity2(2000);
             },
             () -> {
                 shooter.stopAll();
                 intake.stop();
-                Flywheel.setVelocity2(0);
+                flywheel.setVelocity2(0);
             },
             shooter, intake
         ));
 
         /* Track Controls */
-        feederButton2.onTrue(new InstantCommand(() -> Flywheel.setVelocity2(-2000)));
-        feederButton2.onFalse(new InstantCommand(() -> Flywheel.setVelocity2(0)));
+        feederButton2.onTrue(new InstantCommand(() -> flywheel.setVelocity2(-2000)));
+        feederButton2.onFalse(new InstantCommand(() -> flywheel.setVelocity2(0)));
 
         // INTAKE DOWN OR UP //
-        toggleMotor2Button.onTrue(new InstantCommand(() -> Flywheel.toggleMotor1Position(-15.25)));
+        toggleMotor2Button.onTrue(new InstantCommand(() -> flywheel.toggleMotor1Position(-15.25)));
 
         /* Aim and Drive - Hold A to auto-aim at hub while driving */
         aimButton.whileTrue(new AimAndDriveCommand(
@@ -225,6 +268,7 @@ public class RobotContainer {
                     hoodPresetIndex++;
                 }
                 hood.setPosition(hoodPresets[hoodPresetIndex]);
+                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
 
         /* Hood Preset - D-Pad Down (cycle down: 1.0 -> 0.32 -> 0) */
@@ -234,6 +278,7 @@ public class RobotContainer {
                     hoodPresetIndex--;
                 }
                 hood.setPosition(hoodPresets[hoodPresetIndex]);
+                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
 
         /* Prepare Shot + Auto-Aim - D-Pad Right (hold to aim, spin up shooter, position hood, then feed after delay) */
@@ -247,18 +292,18 @@ public class RobotContainer {
                     .andThen(new StartEndCommand(
                         () -> {
                             shooter.runFeeder(Constants.Shooter.feederSpeed);
-                            Flywheel.setVelocity2(-2000);
+                            flywheel.setVelocity2(-2000);
                         },
                         () -> {
                             shooter.runFeeder(0);
-                            Flywheel.setVelocity2(0);
+                            flywheel.setVelocity2(0);
                         }
                     ))
             ));
 
         /* Shooter Control - Right Trigger (speed based on hood preset) */
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
-            .whileTrue(new ShootCommand(shooter, Flywheel, this::setShooterForPreset));
+            .whileTrue(new ShootCommand(shooter, flywheel, this::setShooterForPreset));
 
         /* Climb Control - Driver 1 Triggers (hold to move) */
         new Trigger(() -> driver.getRightTriggerAxis() > 0.1)
@@ -273,6 +318,97 @@ public class RobotContainer {
                 () -> climb.climbDown(),
                 () -> climb.stop(),
                 climb
+            ));
+
+        /* ===== SINGLE CONTROLLER (port 5) ===== */
+
+        /* Zero Gyro - Y */
+        singleZeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
+
+        /* Reverse All (feeder/unjam) - B (hold) */
+        singleReverseAll.whileTrue(new StartEndCommand(
+            () -> {
+                shooter.setPercentOutput(-Constants.Shooter.shooterSpeed);
+                shooter.runFeeder(-Constants.Shooter.feederSpeed);
+                intake.setPercent(0.65);
+                flywheel.setVelocity2(2000);
+            },
+            () -> {
+                shooter.stopAll();
+                intake.stop();
+                flywheel.setVelocity2(0);
+            },
+            shooter, intake
+        ));
+
+        /* Track/Feeder - A (hold) */
+        singleFeeder.onTrue(new InstantCommand(() -> flywheel.setVelocity2(-2000)));
+        singleFeeder.onFalse(new InstantCommand(() -> flywheel.setVelocity2(0)));
+
+        /* Intake Deploy Toggle - X */
+        singleIntakeToggle.onTrue(new InstantCommand(() -> flywheel.toggleMotor1Position(-15.25)));
+
+        /* Hood Extend - LB (hold) */
+        singleExtendActuator.whileTrue(new MoveActuator(hood, true));
+
+        /* Hood Retract - RB (hold) */
+        singleRetractActuator.whileTrue(new MoveActuator(hood, false));
+
+        /* Intake - Left Trigger (half power) */
+        new Trigger(() -> singleController.getLeftTriggerAxis() > 0.1)
+            .whileTrue(new InstantCommand(() -> intake.setPercent(-0.375), intake))
+            .onFalse(new InstantCommand(() -> intake.stop(), intake));
+
+        /* Shoot - Right Trigger (speed based on hood preset) */
+        new Trigger(() -> singleController.getRightTriggerAxis() > 0.1)
+            .whileTrue(new ShootCommand(shooter, flywheel, this::setShooterForPreset));
+
+        /* Intake Full (100%) - D-Pad Left */
+        new Trigger(() -> singleController.getPOV() == 270)
+            .whileTrue(new StartEndCommand(
+                () -> intake.setPercent(-0.65),
+                () -> intake.stop(),
+                intake
+            ));
+
+        /* Hood Preset Up - D-Pad Up */
+        new Trigger(() -> singleController.getPOV() == 0)
+            .onTrue(new InstantCommand(() -> {
+                if (hoodPresetIndex < hoodPresets.length - 1) {
+                    hoodPresetIndex++;
+                }
+                hood.setPosition(hoodPresets[hoodPresetIndex]);
+                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
+            }, hood));
+
+        /* Hood Preset Down - D-Pad Down */
+        new Trigger(() -> singleController.getPOV() == 180)
+            .onTrue(new InstantCommand(() -> {
+                if (hoodPresetIndex > 0) {
+                    hoodPresetIndex--;
+                }
+                hood.setPosition(hoodPresets[hoodPresetIndex]);
+                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
+            }, hood));
+
+        /* Prepare Shot + Auto-Aim - D-Pad Right (hold) */
+        new Trigger(() -> singleController.getPOV() == 90)
+            .whileTrue(Commands.parallel(
+                new AimAndDriveCommand(swerve,
+                    () -> -singleController.getRawAxis(translationAxis),
+                    () -> -singleController.getRawAxis(strafeAxis)),
+                new PrepareShotCommand(shooter, hood, swerve::getPose),
+                Commands.waitSeconds(Constants.Shooter.feederDelay)
+                    .andThen(new StartEndCommand(
+                        () -> {
+                            shooter.runFeeder(Constants.Shooter.feederSpeed);
+                            flywheel.setVelocity2(-2000);
+                        },
+                        () -> {
+                            shooter.runFeeder(0);
+                            flywheel.setVelocity2(0);
+                        }
+                    ))
             ));
     }
     private Command updateVisionCommand() {
@@ -312,16 +448,16 @@ public class RobotContainer {
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterSpeedHoodDown + " duty cycle");
                 break;
             case 1:
-                shooter.setRPM(2900);
-                SmartDashboard.putString("Shooter Power", "2900 RPM");
+                shooter.setRPM(3500);
+                SmartDashboard.putString("Shooter Power", "3000 RPM");
                 break;
             case 2:
                 shooter.setRPM(Constants.Shooter.shooterRPM);
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterRPM + " RPM");
                 break;
             case 3:
-                shooter.setPercentOutput(Constants.Shooter.shooterSpeedHoodUp);
-                SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterSpeedHoodUp + " duty cycle");
+                shooter.setRPM(3900);
+                SmartDashboard.putString("Shooter Power", "3900 RPM");
                 break;
             default:
                 shooter.setRPM(Constants.Shooter.shooterRPM);

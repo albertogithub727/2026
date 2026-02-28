@@ -23,7 +23,7 @@ public class ShootCommand extends Command {
         this.shooter = shooter;
         this.flywheel = flywheel;
         this.shooterSpeedSetup = shooterSpeedSetup;
-        addRequirements(shooter);
+        addRequirements(shooter, flywheel);
     }
 
     @Override

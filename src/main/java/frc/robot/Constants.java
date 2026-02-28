@@ -141,6 +141,7 @@ public final class Constants {
         /* Shooter Speed */
         public static final double shooterSpeed = .57; // duty cycle for reverse/unjam
         public static final double shooterRPM = 3700; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
+        public static final double autoShooterRPM = 3200; // slightly slower RPM for autonomous
         public static final double shooterSpeedHoodDown = 0.5; // duty cycle for hood preset 0
         public static final double shooterSpeedHoodUp = 0.8; // duty cycle for hood preset 1
         public static final double feederSpeed = 1.0;
@@ -164,7 +165,7 @@ public final class Constants {
         public static final int motor2ID = 10; // TODO: Set your second flywheel motor CAN ID
 
         /* Motor Invert */
-        public static final InvertedValue motorInvert = InvertedValue.CounterClockwise_Positive;
+        public static final InvertedValue motorInvert = InvertedValue.Clockwise_Positive;
         public static final InvertedValue motor2Invert = InvertedValue.CounterClockwise_Positive; // TODO: Adjust if needed
 
         /* Neutral Mode */

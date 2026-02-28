@@ -4,7 +4,14 @@
       "Bash(.gradlew.bat build:*)",
       "Bash(cmd /c \"gradlew.bat build\")",
       "Bash(cmd /c \"cd /d C:\\\\Users\\\\4125-Programer\\\\Desktop\\\\2026-main && gradlew.bat build 2>&1\")",
-      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\4125-Programer\\\\Desktop\\\\2026-main''; & .\\\\gradlew.bat build 2>&1\")"
+      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\4125-Programer\\\\Desktop\\\\2026-main''; & .\\\\gradlew.bat build 2>&1\")",
+      "Bash(cmd.exe:*)",
+      "Bash(./gradlew.bat compileJava:*)",
+      "Bash(grep:*)",
+      "Bash(cmd /c:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(export JAVA_HOME:*)",
+      "Bash(export JAVA_HOME=\"C:\\\\Users\\\\Public\\\\wpilib\\\\2026\\\\jdk\")"
     ]
   }
 }

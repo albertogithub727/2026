@@ -71,7 +71,7 @@ public class Shooter extends SubsystemBase {
             )
             .withSlot0(
                 new Slot0Configs()
-                    .withKP(2.8)
+                    .withKP(3.0)
                     .withKI(0.5)
                     .withKD(0.01)
                     .withKV(12.25 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))

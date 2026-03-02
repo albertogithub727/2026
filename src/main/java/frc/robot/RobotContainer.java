@@ -134,9 +134,11 @@ public class RobotContainer {
         NamedCommands.registerCommand("ShooterSpinUpRPM",
             new ShootCommand(shooter, flywheel, () -> shooter.setRPM(Constants.Shooter.shooterRPM)));
         NamedCommands.registerCommand("ShooterRPMOn", new InstantCommand(() -> shooter.setRPM(Constants.Shooter.autoShooterRPM)));
+        final double[] feederStartPos = {0.0};
         NamedCommands.registerCommand("FeederOn", new FunctionalCommand(
-            // init - start feeder + track
+            // init - save starting position, start feeder + track
             () -> {
+                feederStartPos[0] = flywheel.getPosition1();
                 shooter.runFeeder(Constants.Shooter.feederSpeed);
                 flywheel.setVelocity2(-2000);
             },
@@ -148,11 +150,11 @@ public class RobotContainer {
                     : -Constants.Shooter.intakeBopSpeed;
                 flywheel.setPercent1(speed);
             },
-            // end - stop feeder, track, and intake bop
+            // end - stop feeder, track, return intake to original position
             (interrupted) -> {
                 shooter.runFeeder(0);
                 flywheel.setVelocity2(0);
-                flywheel.setPosition1(flywheel.getPosition1());
+                flywheel.setPosition1(feederStartPos[0]);
             },
             // isFinished
             () -> false
@@ -160,7 +162,7 @@ public class RobotContainer {
         NamedCommands.registerCommand("ShooterOff", new InstantCommand(() -> {
             shooter.stopAll();
             flywheel.setVelocity2(0);
-            flywheel.setPosition1(flywheel.getPosition1()); // stop bop and hold position
+            flywheel.setPosition1(feederStartPos[0]); // return intake to original position
         }));
 
         // Prepare shot (auto hood + shooter based on distance)

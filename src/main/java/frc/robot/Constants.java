@@ -141,7 +141,7 @@ public final class Constants {
         /* Shooter Speed */
         public static final double shooterSpeed = .57; // duty cycle for reverse/unjam
         public static final double shooterRPM = 3700; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
-        public static final double autoShooterRPM = 3200; // slightly slower RPM for autonomous
+        public static final double autoShooterRPM = 3450; // slightly slower RPM for autonomous
         public static final double shooterSpeedHoodDown = 0.5; // duty cycle for hood preset 0
         public static final double shooterSpeedHoodUp = 0.8; // duty cycle for hood preset 1
         public static final double feederSpeed = 1.0;
@@ -155,9 +155,9 @@ public final class Constants {
 
         /* Intake bop during shooting (dislodge stuck balls) */
         public static final double intakeBopDelay = 1.0; // seconds before bop starts
-        public static final double intakeBopInterval = 0.5
+        public static final double intakeBopInterval = 0.4
         ; // seconds between each direction switch
-        public static final double intakeBopSpeed = 0.17; // duty cycle for bop
+        public static final double intakeBopSpeed = 0.30; // duty cycle for bop
     }
 
     public static final class Flywheel {

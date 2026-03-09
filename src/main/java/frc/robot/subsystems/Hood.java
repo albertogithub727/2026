@@ -45,7 +45,7 @@ public class Hood extends SubsystemBase {
     public void setPosition(double position) {
         final double clampedPosition = MathUtil.clamp(position, kMinPosition, kMaxPosition);
         leftServo.set(clampedPosition);
-        rightServo.set(clampedPosition);
+        rightServo.set(MathUtil.clamp(clampedPosition + 0.001, kMinPosition, kMaxPosition));
         targetPosition = clampedPosition;
     }
 

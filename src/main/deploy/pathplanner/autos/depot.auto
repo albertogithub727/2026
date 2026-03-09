@@ -5,15 +5,28 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "path1"
+            "name": "IntakeDown"
           }
         },
         {
-          "type": "wait",
+          "type": "deadline",
           "data": {
-            "waitTime": 1.5
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "path1 mirrored"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "IntakeOn"
+                }
+              }
+            ]
           }
         },
         {
@@ -23,7 +36,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "seperate route"
+                  "pathName": "seperate route mirrored"
                 }
               },
               {
@@ -63,7 +76,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "path 4"
+            "pathName": "path 4 mirrored"
           }
         }
       ]

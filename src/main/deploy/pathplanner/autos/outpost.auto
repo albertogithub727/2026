@@ -5,6 +5,12 @@
     "data": {
       "commands": [
         {
+          "type": "named",
+          "data": {
+            "name": "IntakeDown"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "path1"
@@ -13,64 +19,45 @@
         {
           "type": "wait",
           "data": {
-            "waitTime": 0.75
+            "waitTime": 1.5
           }
         },
         {
-          "type": "deadline",
+          "type": "parallel",
           "data": {
             "commands": [
               {
                 "type": "path",
                 "data": {
-                  "pathName": "path 2"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "type": "deadline",
-          "data": {
-            "commands": [
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "path 3"
+                  "pathName": "seperate route"
                 }
               },
               {
-                "type": "sequential",
+                "type": "named",
                 "data": {
-                  "commands": [
-                    {
-                      "type": "named",
-                      "data": {
-                        "name": "ShooterRPMOn"
-                      }
-                    },
-                    {
-                      "type": "wait",
-                      "data": {
-                        "waitTime": 1.85
-                      }
-                    },
-                    {
-                      "type": "named",
-                      "data": {
-                        "name": "FeederOn"
-                      }
-                    }
-                  ]
+                  "name": "ShooterRPMOn"
                 }
               }
             ]
           }
         },
         {
-          "type": "wait",
+          "type": "deadline",
           "data": {
-            "waitTime": 2.0
+            "commands": [
+              {
+                "type": "wait",
+                "data": {
+                  "waitTime": 6.0
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "FeederOn"
+                }
+              }
+            ]
           }
         },
         {

@@ -147,7 +147,7 @@ public final class Constants {
         public static final double feederSpeed = 1.0;
 
         /* Delay before feeder starts (seconds) */
-        public static final double feederDelay = 1.85;
+        public static final double feederDelay = 2.0;
 
         /* Agitator (angle motor shake) */
         public static final double agitateAmplitude = 10.0; // degrees of oscillation

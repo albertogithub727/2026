@@ -31,7 +31,13 @@ public class Climb extends SubsystemBase {
         climbMotor.getConfigurator().apply(config);
     }
 
+    private static final double MAX_CLIMB_ROTATIONS = 68.0;
+
     public void climbUp() {
+        if (climbMotor.getPosition().getValueAsDouble() >= MAX_CLIMB_ROTATIONS) {
+            stop();
+            return;
+        }
         dutyCycleControl.Output = Constants.Climb.climbSpeed;
         climbMotor.setControl(dutyCycleControl);
     }
@@ -48,6 +54,10 @@ public class Climb extends SubsystemBase {
 
     @Override
     public void periodic() {
+        if (climbMotor.getPosition().getValueAsDouble() >= MAX_CLIMB_ROTATIONS && dutyCycleControl.Output > 0) {
+            stop();
+        }
         SmartDashboard.putNumber("Climb/Motor Output", dutyCycleControl.Output);
+        SmartDashboard.putNumber("Climb/Position", climbMotor.getPosition().getValueAsDouble());
     }
 }

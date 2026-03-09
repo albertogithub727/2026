@@ -58,7 +58,7 @@ public class Intake extends SubsystemBase {
      * Run the intake at full speed forward
      */
     public void intake() {
-        setPercent(-.75);
+        setPercent(-.83);
     }
 
     /**

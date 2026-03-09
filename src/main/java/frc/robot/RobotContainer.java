@@ -52,8 +52,6 @@ public class RobotContainer {
     private final JoystickButton robotCentric = new JoystickButton(driver, XboxController.Button.kBack.value);
     private final JoystickButton feederButton = new JoystickButton(driver2, XboxController.Button.kB.value);
     private final JoystickButton feederButton2 = new JoystickButton(driver2, XboxController.Button.kA.value);
-    private final JoystickButton toggleMotor2Button = new JoystickButton(driver2, XboxController.Button.kX.value);
-    
     // Linear Actuator controls - HOLD TO MOVE
     private final JoystickButton extendActuator = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
     private final JoystickButton retractActuator = new JoystickButton(driver, XboxController.Button.kRightBumper.value);
@@ -95,7 +93,9 @@ public class RobotContainer {
             new TeleopSwerve(
                 swerve,
                 () -> -driver.getRawAxis(translationAxis) - singleController.getRawAxis(translationAxis),
-                () -> -driver.getRawAxis(strafeAxis) - singleController.getRawAxis(strafeAxis),
+                () -> -driver.getRawAxis(strafeAxis) - singleController.getRawAxis(strafeAxis)
+                    + (driver.getLeftBumperButton() ? -0.2 : 0) + (driver.getRightBumperButton() ? 0.2 : 0)
+                    + (singleController.getLeftBumperButton() ? -0.2 : 0) + (singleController.getRightBumperButton() ? 0.2 : 0),
                 () -> -driver.getRawAxis(rotationAxis) - singleController.getRawAxis(rotationAxis),
                 () -> robotCentric.getAsBoolean() || singleRobotCentric.getAsBoolean()
             )
@@ -123,9 +123,9 @@ public class RobotContainer {
 
         // Intake deploy (up/down)
         NamedCommands.registerCommand("IntakeDown",
-            new InstantCommand(() -> { if (!flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(-15.25); }));
+            new InstantCommand(() -> { if (!flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(15.25); }));
         NamedCommands.registerCommand("IntakeUp",
-            new InstantCommand(() -> { if (flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(-15.25); }));
+            new InstantCommand(() -> { if (flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(15.25); }));
 
         // Shooter
         NamedCommands.registerCommand("Shoot", new ShootCommand(shooter, flywheel));
@@ -230,8 +230,21 @@ public class RobotContainer {
         feederButton2.onTrue(new InstantCommand(() -> flywheel.setVelocity2(-2000)));
         feederButton2.onFalse(new InstantCommand(() -> flywheel.setVelocity2(0)));
 
-        // INTAKE DOWN OR UP //
-        toggleMotor2Button.onTrue(new InstantCommand(() -> flywheel.toggleMotor1Position(-15.25)));
+        // INTAKE DOWN - Driver D-Pad Up (hold for 30% power)
+        new Trigger(() -> driver.getPOV() == 0)
+            .whileTrue(new StartEndCommand(
+                () -> flywheel.setPercent1(-0.2),
+                () -> flywheel.setPercent1(0),
+                flywheel
+            ));
+
+        // INTAKE UP - Driver D-Pad Down (hold for 30% power)
+        new Trigger(() -> driver.getPOV() == 180)
+            .whileTrue(new StartEndCommand(
+                () -> flywheel.setPercent1(0.2),
+                () -> flywheel.setPercent1(0),
+                flywheel
+            ));
 
         /* Aim and Drive - Hold A to auto-aim at hub while driving */
         aimButton.whileTrue(new AimAndDriveCommand(
@@ -240,15 +253,7 @@ public class RobotContainer {
             () -> -driver.getRawAxis(strafeAxis)
         ));
 
-        /* Linear Actuator Control - HOLD TO MOVE CONTINUOUSLY */
-        
-        // LEFT BUMPER: Hold to extend gradually
-        // Releases automatically when button is released
-        extendActuator.whileTrue(new MoveActuator(hood, true));
-
-        // RIGHT BUMPER: Hold to retract gradually
-        // Releases automatically when button is released
-        retractActuator.whileTrue(new MoveActuator(hood, false));
+        /* Bumpers now used for strafing (added to default swerve command strafe supplier) */
 
         /* Intake Control - Left Trigger (65%) */
         new Trigger(() -> driver2.getLeftTriggerAxis() > 0.1)
@@ -350,11 +355,7 @@ public class RobotContainer {
         /* Intake Deploy Toggle - X */
         singleIntakeToggle.onTrue(new InstantCommand(() -> flywheel.toggleMotor1Position(-15.25)));
 
-        /* Hood Extend - LB (hold) */
-        singleExtendActuator.whileTrue(new MoveActuator(hood, true));
-
-        /* Hood Retract - RB (hold) */
-        singleRetractActuator.whileTrue(new MoveActuator(hood, false));
+        /* Bumpers now used for strafing (added to default swerve command strafe supplier) */
 
         /* Intake - Left Trigger (half power) */
         new Trigger(() -> singleController.getLeftTriggerAxis() > 0.1)
@@ -365,16 +366,24 @@ public class RobotContainer {
         new Trigger(() -> singleController.getRightTriggerAxis() > 0.1)
             .whileTrue(new ShootCommand(shooter, flywheel, this::setShooterForPreset));
 
-        /* Intake Full (100%) - D-Pad Left */
-        new Trigger(() -> singleController.getPOV() == 270)
+        /* Climb Up - D-Pad Up (hold) */
+        new Trigger(() -> singleController.getPOV() == 0)
             .whileTrue(new StartEndCommand(
-                () -> intake.setPercent(-0.65),
-                () -> intake.stop(),
-                intake
+                () -> climb.climbUp(),
+                () -> climb.stop(),
+                climb
             ));
 
-        /* Hood Preset Up - D-Pad Up */
-        new Trigger(() -> singleController.getPOV() == 0)
+        /* Climb Down - D-Pad Down (hold) */
+        new Trigger(() -> singleController.getPOV() == 180)
+            .whileTrue(new StartEndCommand(
+                () -> climb.climbDown(),
+                () -> climb.stop(),
+                climb
+            ));
+
+        /* Hood Preset Up - D-Pad Right */
+        new Trigger(() -> singleController.getPOV() == 90)
             .onTrue(new InstantCommand(() -> {
                 if (hoodPresetIndex < hoodPresets.length - 1) {
                     hoodPresetIndex++;
@@ -383,8 +392,8 @@ public class RobotContainer {
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
 
-        /* Hood Preset Down - D-Pad Down */
-        new Trigger(() -> singleController.getPOV() == 180)
+        /* Hood Preset Down - D-Pad Left */
+        new Trigger(() -> singleController.getPOV() == 270)
             .onTrue(new InstantCommand(() -> {
                 if (hoodPresetIndex > 0) {
                     hoodPresetIndex--;
@@ -392,26 +401,6 @@ public class RobotContainer {
                 hood.setPosition(hoodPresets[hoodPresetIndex]);
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
-
-        /* Prepare Shot + Auto-Aim - D-Pad Right (hold) */
-        new Trigger(() -> singleController.getPOV() == 90)
-            .whileTrue(Commands.parallel(
-                new AimAndDriveCommand(swerve,
-                    () -> -singleController.getRawAxis(translationAxis),
-                    () -> -singleController.getRawAxis(strafeAxis)),
-                new PrepareShotCommand(shooter, hood, swerve::getPose),
-                Commands.waitSeconds(Constants.Shooter.feederDelay)
-                    .andThen(new StartEndCommand(
-                        () -> {
-                            shooter.runFeeder(Constants.Shooter.feederSpeed);
-                            flywheel.setVelocity2(-2000);
-                        },
-                        () -> {
-                            shooter.runFeeder(0);
-                            flywheel.setVelocity2(0);
-                        }
-                    ))
-            ));
     }
     private Command updateVisionCommand() {
         return limelight.run(() -> {

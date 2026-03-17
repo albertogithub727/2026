@@ -11,7 +11,8 @@
       "Bash(cmd /c:*)",
       "Bash(./gradlew build:*)",
       "Bash(export JAVA_HOME:*)",
-      "Bash(export JAVA_HOME=\"C:\\\\Users\\\\Public\\\\wpilib\\\\2026\\\\jdk\")"
+      "Bash(export JAVA_HOME=\"C:\\\\Users\\\\Public\\\\wpilib\\\\2026\\\\jdk\")",
+      "Bash(del \"c:\\\\Users\\\\4125-Programer\\\\Desktop\\\\2026-main\\\\src\\\\main\\\\java\\\\frc\\\\robot\\\\subsystems\\\\Climb.java\")"
     ]
   }
 }

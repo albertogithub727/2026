@@ -93,7 +93,7 @@ public final class Constants {
             public static final int driveMotorID = 2;
             public static final int angleMotorID = 4;
             public static final int canCoderID = 31;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(215);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(211);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -103,7 +103,7 @@ public final class Constants {
             public static final int driveMotorID = 7;
             public static final int angleMotorID = 5;
             public static final int canCoderID = 33;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(10);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(8);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -113,7 +113,7 @@ public final class Constants {
             public static final int driveMotorID = 6;
             public static final int angleMotorID = 1;
             public static final int canCoderID = 32;
-            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(251);
+            public static final Rotation2d angleOffset = Rotation2d.fromDegrees(248);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
@@ -140,24 +140,24 @@ public final class Constants {
 
         /* Shooter Speed */
         public static final double shooterSpeed = .57; // duty cycle for reverse/unjam
-        public static final double shooterRPM = 3700; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
-        public static final double autoShooterRPM = 3450; // slightly slower RPM for autonomous
+        public static final double shooterRPM = 3900; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
+        public static final double autoShooterRPM = 3575; // slightly slower RPM for autonomous
         public static final double shooterSpeedHoodDown = 0.5; // duty cycle for hood preset 0
         public static final double shooterSpeedHoodUp = 0.8; // duty cycle for hood preset 1
-        public static final double feederSpeed = 1.0;
+        public static final double feederSpeed = .8;
 
         /* Delay before feeder starts (seconds) */
         public static final double feederDelay = 2.0;
+
+        /* Strafe during shooting (oscillate left/right) */
+        public static final double shootStrafeDelay = 2.0; // seconds before strafe starts
+        public static final double shootStrafeInterval = 0.10; // seconds between direction switches
+        public static final double shootStrafeSpeed = 0.2; // strafe speed (same as bumper strafe)
 
         /* Agitator (angle motor shake) */
         public static final double agitateAmplitude = 10.0; // degrees of oscillation
         public static final double agitateFrequency = 30.0; // Hz
 
-        /* Intake bop during shooting (dislodge stuck balls) */
-        public static final double intakeBopDelay = 1.0; // seconds before bop starts
-        public static final double intakeBopInterval = 0.4
-        ; // seconds between each direction switch
-        public static final double intakeBopSpeed = 0.30; // duty cycle for bop
     }
 
     public static final class Flywheel {
@@ -199,21 +199,4 @@ public final class Constants {
         public static final double motionMagicAcceleration = 35; // rotations per second^2
     }
 
-    public static final class Climb {
-        public static final int motorID = 14;
-
-        /* Motor Invert */
-        public static final InvertedValue motorInvert = InvertedValue.CounterClockwise_Positive;
-
-        /* Neutral Mode */
-        public static final NeutralModeValue neutralMode = NeutralModeValue.Brake;
-
-        /* Current Limiting */
-        public static final int supplyCurrentLimit = 40;
-        public static final int statorCurrentLimit = 80;
-        public static final boolean enableCurrentLimit = true;
-
-        /* Climb Speed (duty cycle, -1.0 to 1.0) */
-        public static final double climbSpeed = 1.0;
-    }
 }

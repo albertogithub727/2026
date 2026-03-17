@@ -58,14 +58,14 @@ public class Intake extends SubsystemBase {
      * Run the intake at full speed forward
      */
     public void intake() {
-        setPercent(-.83);
+        setPercent(-1 );
     }
 
     /**
      * Run the intake at full speed backward (outtake)
      */
     public void outtake() {
-        setPercent(-1.0);
+        setPercent(1.0);
     }
 
     /**

@@ -23,7 +23,6 @@ import frc.robot.commands.MoveActuator;
 import frc.robot.commands.PrepareShotCommand;
 import frc.robot.commands.ShootCommand;
 import frc.robot.commands.TeleopSwerve;
-import frc.robot.subsystems.Climb;
 import frc.robot.subsystems.Flywheel;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Hood;
@@ -38,7 +37,7 @@ public class RobotContainer {
     /* Controllers */
     private final XboxController driver = new XboxController(0);
     private final XboxController driver2 = new XboxController(1);
-    private final XboxController singleController = new XboxController(5);
+    // private final XboxController singleController = new XboxController(5);
 
 
 
@@ -62,18 +61,26 @@ public class RobotContainer {
     // Hood preset - set both actuators to 0.32
     private final JoystickButton hoodPresetButton = new JoystickButton(driver, XboxController.Button.kX.value);
 
+    // Auto-Shoot - Start button (hold to auto-aim + distance-based RPM/hood + feed)
+    private final JoystickButton autoShootButton = new JoystickButton(driver, XboxController.Button.kStart.value);
+    private final JoystickButton autoShootButton2 = new JoystickButton(driver2, XboxController.Button.kStart.value);
+
     /* Single Controller Buttons (port 5) */
-    private final JoystickButton singleZeroGyro = new JoystickButton(singleController, XboxController.Button.kY.value);
-    private final JoystickButton singleRobotCentric = new JoystickButton(singleController, XboxController.Button.kBack.value);
-    private final JoystickButton singleReverseAll = new JoystickButton(singleController, XboxController.Button.kB.value);
-    private final JoystickButton singleFeeder = new JoystickButton(singleController, XboxController.Button.kA.value);
-    private final JoystickButton singleIntakeToggle = new JoystickButton(singleController, XboxController.Button.kX.value);
-    private final JoystickButton singleExtendActuator = new JoystickButton(singleController, XboxController.Button.kLeftBumper.value);
-    private final JoystickButton singleRetractActuator = new JoystickButton(singleController, XboxController.Button.kRightBumper.value);
+    // private final JoystickButton singleZeroGyro = new JoystickButton(singleController, XboxController.Button.kY.value);
+    // private final JoystickButton singleRobotCentric = new JoystickButton(singleController, XboxController.Button.kBack.value);
+    // private final JoystickButton singleReverseAll = new JoystickButton(singleController, XboxController.Button.kB.value);
+    // private final JoystickButton singleFeeder = new JoystickButton(singleController, XboxController.Button.kA.value);
+    // private final JoystickButton singleIntakeToggle = new JoystickButton(singleController, XboxController.Button.kX.value);
+    // private final JoystickButton singleExtendActuator = new JoystickButton(singleController, XboxController.Button.kLeftBumper.value);
+    // private final JoystickButton singleRetractActuator = new JoystickButton(singleController, XboxController.Button.kRightBumper.value);
+    // private final JoystickButton singleAutoShoot = new JoystickButton(singleController, XboxController.Button.kStart.value);
 
     /* Hood Presets */
-    private final double[] hoodPresets = {0.0, 0.17, 0.32, 0.57};
+    private final double[] hoodPresets = {0, 15, 35, 85};
     private int hoodPresetIndex = 0;
+
+    /* Shooting strafe offset (oscillated during shoot sequence) */
+    private double shootingStrafeOffset = 0.0;
 
     /* Subsystems */
     private final Swerve swerve = new Swerve();
@@ -82,8 +89,6 @@ public class RobotContainer {
     private final Intake intake = new Intake();
     private final Hood hood = new Hood();
     private final Shooter shooter = new Shooter();
-    private final Climb climb = new Climb();
-
     /* SendableChooser for Autonomous Selection */
     private final SendableChooser<Command> chooser;
 
@@ -92,12 +97,12 @@ public class RobotContainer {
         swerve.setDefaultCommand(
             new TeleopSwerve(
                 swerve,
-                () -> -driver.getRawAxis(translationAxis) - singleController.getRawAxis(translationAxis),
-                () -> -driver.getRawAxis(strafeAxis) - singleController.getRawAxis(strafeAxis)
+                () -> -driver.getRawAxis(translationAxis),
+                () -> -driver.getRawAxis(strafeAxis)
                     + (driver.getLeftBumperButton() ? -0.2 : 0) + (driver.getRightBumperButton() ? 0.2 : 0)
-                    + (singleController.getLeftBumperButton() ? -0.2 : 0) + (singleController.getRightBumperButton() ? 0.2 : 0),
-                () -> -driver.getRawAxis(rotationAxis) - singleController.getRawAxis(rotationAxis),
-                () -> robotCentric.getAsBoolean() || singleRobotCentric.getAsBoolean()
+                    + shootingStrafeOffset,
+                () -> -driver.getRawAxis(rotationAxis),
+                () -> robotCentric.getAsBoolean()
             )
         );
 
@@ -128,12 +133,19 @@ public class RobotContainer {
             new InstantCommand(() -> { if (flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(15.25); }));
 
         // Shooter
-        NamedCommands.registerCommand("Shoot", new ShootCommand(shooter, flywheel));
+        NamedCommands.registerCommand("Shoot", new ShootCommand(shooter, flywheel, intake));
         NamedCommands.registerCommand("ShooterSpinUp", new StartEndCommand(
             () -> shooter.setPercentOutput(Constants.Shooter.shooterSpeed), () -> shooter.stopAll(), shooter));
         NamedCommands.registerCommand("ShooterSpinUpRPM",
-            new ShootCommand(shooter, flywheel, () -> shooter.setRPM(Constants.Shooter.shooterRPM)));
-        NamedCommands.registerCommand("ShooterRPMOn", new InstantCommand(() -> shooter.setRPM(Constants.Shooter.autoShooterRPM)));
+            new ShootCommand(shooter, flywheel, intake, () -> shooter.setRPM(Constants.Shooter.shooterRPM)));
+        NamedCommands.registerCommand("ShooterRPMOn", new InstantCommand(() -> {
+            shooter.setRPM(Constants.Shooter.autoShooterRPM);
+            intake.intake();
+        }));
+        NamedCommands.registerCommand("ShooterHood15", new InstantCommand(() -> {
+            hood.setPosition(20);
+            shooter.setRPM(3500);
+        }));
         final double[] feederStartPos = {0.0};
         NamedCommands.registerCommand("FeederOn", new FunctionalCommand(
             // init - save starting position, start feeder + track
@@ -142,19 +154,12 @@ public class RobotContainer {
                 shooter.runFeeder(Constants.Shooter.feederSpeed);
                 flywheel.setVelocity2(-2000);
             },
-            // execute - intake bop
-            () -> {
-                double elapsed = Timer.getFPGATimestamp() % (Constants.Shooter.intakeBopInterval * 2);
-                double speed = elapsed < Constants.Shooter.intakeBopInterval
-                    ? Constants.Shooter.intakeBopSpeed
-                    : -Constants.Shooter.intakeBopSpeed;
-                flywheel.setPercent1(speed);
-            },
-            // end - stop feeder, track, return intake to original position
+            // execute - no-op
+            () -> {},
+            // end - stop feeder + track
             (interrupted) -> {
                 shooter.runFeeder(0);
                 flywheel.setVelocity2(0);
-                flywheel.setPosition1(feederStartPos[0]);
             },
             // isFinished
             () -> false
@@ -162,7 +167,7 @@ public class RobotContainer {
         NamedCommands.registerCommand("ShooterOff", new InstantCommand(() -> {
             shooter.stopAll();
             flywheel.setVelocity2(0);
-            flywheel.setPosition1(feederStartPos[0]); // return intake to original position
+            flywheel.setPosition1(feederStartPos[0]);
         }));
 
         // Prepare shot (auto hood + shooter based on distance)
@@ -176,6 +181,16 @@ public class RobotContainer {
         NamedCommands.registerCommand("AimAndPrepareShot", Commands.parallel(
             new AimAndDriveCommand(swerve),
             new PrepareShotCommand(shooter, hood, swerve::getPose)));
+
+        // Auto-shoot (same as start button) - aim + prepare + feed
+        NamedCommands.registerCommand("AutoShoot", Commands.parallel(
+            new AimAndDriveCommand(swerve),
+            new PrepareShotCommand(shooter, hood, swerve::getPose),
+            Commands.sequence(
+                Commands.waitSeconds(Constants.Shooter.feederDelay),
+                feedAndBopCommand()
+            )
+        ));
 
         // Reverse everything (unjam)
         NamedCommands.registerCommand("Reverse", new StartEndCommand(
@@ -196,11 +211,6 @@ public class RobotContainer {
         NamedCommands.registerCommand("HoodExtend", new MoveActuator(hood, true));
         NamedCommands.registerCommand("HoodRetract", new MoveActuator(hood, false));
 
-        // Climb
-        NamedCommands.registerCommand("ClimbUp", new StartEndCommand(
-            () -> climb.climbUp(), () -> climb.stop(), climb));
-        NamedCommands.registerCommand("ClimbDown", new StartEndCommand(
-            () -> climb.climbDown(), () -> climb.stop(), climb));
     }
 
     /**
@@ -308,31 +318,72 @@ public class RobotContainer {
                     ))
             ));
 
-        /* Shooter Control - Right Trigger (speed based on hood preset) */
+        /* ============================================================
+         * AUTO-SHOOT - START BUTTON (Driver 1 or Driver 2)
+         * Hold to: auto-aim at hub + auto-adjust RPM/hood + feed
+         * Uses Limelight pose estimation for distance calculation
+         * ============================================================ */
+
+        // Driver 1 Start: auto-aim + auto-shoot (driver 1 can still translate)
+        autoShootButton.whileTrue(
+            Commands.parallel(
+                // Auto-aim at hub while allowing driver translation
+                new AimAndDriveCommand(swerve,
+                    () -> -driver.getRawAxis(translationAxis),
+                    () -> -driver.getRawAxis(strafeAxis)),
+                // Auto-adjust RPM and hood based on Limelight distance
+                new PrepareShotCommand(shooter, hood, swerve::getPose),
+                // After spin-up delay, start feeding
+                Commands.sequence(
+                    Commands.waitSeconds(Constants.Shooter.feederDelay),
+                    feedAndBopCommand()
+                )
+            )
+        );
+
+        // Driver 2 Start: same auto-shoot (driver 1 still controls translation)
+        autoShootButton2.whileTrue(
+            Commands.parallel(
+                new AimAndDriveCommand(swerve,
+                    () -> -driver.getRawAxis(translationAxis),
+                    () -> -driver.getRawAxis(strafeAxis)),
+                new PrepareShotCommand(shooter, hood, swerve::getPose),
+                Commands.sequence(
+                    Commands.waitSeconds(Constants.Shooter.feederDelay),
+                    feedAndBopCommand()
+                )
+            )
+        );
+
+        /* Shooter Control - Right Trigger (speed based on hood preset + strafe after delay) */
+        final double[] strafeStart = {0.0};
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
-            .whileTrue(new ShootCommand(shooter, flywheel, this::setShooterForPreset));
-
-        /* Climb Control - Driver 1 Triggers (hold to move) */
-        new Trigger(() -> driver.getRightTriggerAxis() > 0.1)
-            .whileTrue(new StartEndCommand(
-                () -> climb.climbUp(),
-                () -> climb.stop(),
-                climb
-            ));
-
-        new Trigger(() -> driver.getLeftTriggerAxis() > 0.1)
-            .whileTrue(new StartEndCommand(
-                () -> climb.climbDown(),
-                () -> climb.stop(),
-                climb
+            .whileTrue(Commands.parallel(
+                new ShootCommand(shooter, flywheel, intake, this::setShooterForPreset),
+                new FunctionalCommand(
+                    () -> {
+                        strafeStart[0] = Timer.getFPGATimestamp();
+                        shootingStrafeOffset = 0.0;
+                    },
+                    () -> {
+                        double elapsed = Timer.getFPGATimestamp() - strafeStart[0];
+                        if (elapsed >= Constants.Shooter.shootStrafeDelay) {
+                            double strafeElapsed = (elapsed - Constants.Shooter.shootStrafeDelay)
+                                % (Constants.Shooter.shootStrafeInterval * 2);
+                            shootingStrafeOffset = strafeElapsed < Constants.Shooter.shootStrafeInterval
+                                ? Constants.Shooter.shootStrafeSpeed
+                                : -Constants.Shooter.shootStrafeSpeed;
+                        }
+                    },
+                    (interrupted) -> { shootingStrafeOffset = 0.0; },
+                    () -> false
+                )
             ));
 
         /* ===== SINGLE CONTROLLER (port 5) ===== */
-
-        /* Zero Gyro - Y */
+        /*
         singleZeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
 
-        /* Reverse All (feeder/unjam) - B (hold) */
         singleReverseAll.whileTrue(new StartEndCommand(
             () -> {
                 shooter.setPercentOutput(-Constants.Shooter.shooterSpeed);
@@ -348,41 +399,18 @@ public class RobotContainer {
             shooter, intake
         ));
 
-        /* Track/Feeder - A (hold) */
         singleFeeder.onTrue(new InstantCommand(() -> flywheel.setVelocity2(-2000)));
         singleFeeder.onFalse(new InstantCommand(() -> flywheel.setVelocity2(0)));
 
-        /* Intake Deploy Toggle - X */
         singleIntakeToggle.onTrue(new InstantCommand(() -> flywheel.toggleMotor1Position(-15.25)));
 
-        /* Bumpers now used for strafing (added to default swerve command strafe supplier) */
-
-        /* Intake - Left Trigger (half power) */
         new Trigger(() -> singleController.getLeftTriggerAxis() > 0.1)
             .whileTrue(new InstantCommand(() -> intake.setPercent(-0.375), intake))
             .onFalse(new InstantCommand(() -> intake.stop(), intake));
 
-        /* Shoot - Right Trigger (speed based on hood preset) */
         new Trigger(() -> singleController.getRightTriggerAxis() > 0.1)
-            .whileTrue(new ShootCommand(shooter, flywheel, this::setShooterForPreset));
+            .whileTrue(new ShootCommand(shooter, flywheel, intake, this::setShooterForPreset));
 
-        /* Climb Up - D-Pad Up (hold) */
-        new Trigger(() -> singleController.getPOV() == 0)
-            .whileTrue(new StartEndCommand(
-                () -> climb.climbUp(),
-                () -> climb.stop(),
-                climb
-            ));
-
-        /* Climb Down - D-Pad Down (hold) */
-        new Trigger(() -> singleController.getPOV() == 180)
-            .whileTrue(new StartEndCommand(
-                () -> climb.climbDown(),
-                () -> climb.stop(),
-                climb
-            ));
-
-        /* Hood Preset Up - D-Pad Right */
         new Trigger(() -> singleController.getPOV() == 90)
             .onTrue(new InstantCommand(() -> {
                 if (hoodPresetIndex < hoodPresets.length - 1) {
@@ -392,7 +420,6 @@ public class RobotContainer {
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
 
-        /* Hood Preset Down - D-Pad Left */
         new Trigger(() -> singleController.getPOV() == 270)
             .onTrue(new InstantCommand(() -> {
                 if (hoodPresetIndex > 0) {
@@ -401,7 +428,47 @@ public class RobotContainer {
                 hood.setPosition(hoodPresets[hoodPresetIndex]);
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
+
+        singleAutoShoot.whileTrue(
+            Commands.parallel(
+                new AimAndDriveCommand(swerve,
+                    () -> -singleController.getRawAxis(translationAxis),
+                    () -> -singleController.getRawAxis(strafeAxis)),
+                new PrepareShotCommand(shooter, hood, swerve::getPose),
+                Commands.sequence(
+                    Commands.waitSeconds(Constants.Shooter.feederDelay),
+                    feedAndBopCommand()
+                )
+            )
+        );
+        */
     }
+
+    /**
+     * Creates a command that runs the feeder and track.
+     * Used by the auto-shoot sequence after the shooter has spun up.
+     * Does NOT declare shooter/flywheel as requirements so it can run
+     * in parallel with PrepareShotCommand.
+     */
+    private Command feedAndBopCommand() {
+        return new FunctionalCommand(
+            // init: start feeder + track
+            () -> {
+                shooter.runFeeder(Constants.Shooter.feederSpeed);
+                flywheel.setVelocity2(-2000);
+            },
+            // execute - no-op
+            () -> {},
+            // end: stop everything
+            (interrupted) -> {
+                shooter.runFeeder(0);
+                flywheel.setVelocity2(0);
+            },
+            // never finishes - runs until parent command group is cancelled
+            () -> false
+        );
+    }
+
     private Command updateVisionCommand() {
         return limelight.run(() -> {
             final Pose2d currentRobotPose = swerve.getPose();
@@ -447,7 +514,7 @@ public class RobotContainer {
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterRPM + " RPM");
                 break;
             case 3:
-                shooter.setRPM(3900);
+                shooter.setRPM(4000);
                 SmartDashboard.putString("Shooter Power", "3900 RPM");
                 break;
             default:

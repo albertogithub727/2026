@@ -32,10 +32,16 @@ public class PrepareShotCommand extends Command {
     );
 
     static {
-        // RPM values for shooter motors at different distances
-        distanceToShotMap.put(Inches.of(52.0), new Shot(2100, 0.15));
-        distanceToShotMap.put(Inches.of(114.4), new Shot(3000, 0.32));
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4000, 0.38));
+        // Distance-based RPM and hood position lookup table
+        // TODO: Tune these values on the actual field by measuring shots at known distances
+        distanceToShotMap.put(Inches.of(36.0),  new Shot(2340, 5));   // Very close - low RPM, hood nearly flat
+        distanceToShotMap.put(Inches.of(52.0),  new Shot(3300, 10));    // Close range
+        distanceToShotMap.put(Inches.of(78.0),  new Shot(3600, 18)); // Short-mid range
+        distanceToShotMap.put(Inches.of(114.4), new Shot(3850, 26)); // Mid range (original)
+        distanceToShotMap.put(Inches.of(140.0), new Shot(3900, 30));   // Mid-far range
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4000, 33)); // Far range (original)
+        distanceToShotMap.put(Inches.of(200.0), new Shot(4100, 35)); // Very far
+        distanceToShotMap.put(Inches.of(240.0), new Shot(4150, 40)); // Maximum practical range
     }
 
     private final Shooter shooter;
@@ -50,7 +56,7 @@ public class PrepareShotCommand extends Command {
     }
 
     public boolean isReadyToShoot() {
-        return hood.isPositionWithinTolerance();
+        return hood.isPositionWithinTolerance() && shooter.isVelocityWithinTolerance();
     }
 
     private Distance getDistanceToHub() {
@@ -65,7 +71,11 @@ public class PrepareShotCommand extends Command {
         final Shot shot = distanceToShotMap.get(distanceToHub);
         shooter.setRPM(shot.shooterSpeed);
         hood.setPosition(shot.hoodPosition);
-        SmartDashboard.putNumber("Distance to Hub (inches)", distanceToHub.in(Inches));
+
+        SmartDashboard.putNumber("Auto Shot/Distance (in)", distanceToHub.in(Inches));
+        SmartDashboard.putNumber("Auto Shot/Target RPM", shot.shooterSpeed);
+        SmartDashboard.putNumber("Auto Shot/Hood Position", shot.hoodPosition);
+        SmartDashboard.putBoolean("Auto Shot/Ready", isReadyToShoot());
     }
 
     @Override

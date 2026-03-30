@@ -39,10 +39,16 @@ public class ShootCommand extends Command {
         if (elapsed >= Constants.Shooter.feederDelay) {
             shooter.runFeeder(Constants.Shooter.feederSpeed);
             flywheel.setVelocity2(-500);
-        }
+            intake.intake2();
 
-        if (elapsed >= 2.0) {
-            intake.intake();
+            // Oscillate intake arm up and down (like D-pad up/down)
+            double timeSinceFeeder = elapsed - Constants.Shooter.feederDelay;
+            int cycleIndex = (int) (timeSinceFeeder / Constants.Shooter.intakeArmOscillateInterval);
+            if (cycleIndex % 2 == 0) {
+                flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp);
+            } else {
+                flywheel.setPercent1(Constants.Shooter.intakeArmOscillateSpeedDown);
+            }
         }
     }
 
@@ -50,6 +56,7 @@ public class ShootCommand extends Command {
     public void end(boolean interrupted) {
         shooter.stopAll();
         flywheel.setVelocity2(0);
+        flywheel.setPercent1(0);
         intake.stop();
         timer.stop();
     }

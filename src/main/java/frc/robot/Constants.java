@@ -147,7 +147,7 @@ public final class Constants {
         public static final double feederSpeed = .8;
 
         /* Delay before feeder starts (seconds) */
-        public static final double feederDelay = 2.0;
+        public static final double feederDelay = 2;
 
         /* Strafe during shooting (oscillate left/right) */
         public static final double shootStrafeDelay = 2.0; // seconds before strafe starts
@@ -157,6 +157,11 @@ public final class Constants {
         /* Agitator (angle motor shake) */
         public static final double agitateAmplitude = 10.0; // degrees of oscillation
         public static final double agitateFrequency = 30.0; // Hz
+
+        /* Intake arm oscillation during shooting (flywheel motor 1) */
+        public static final double intakeArmOscillateSpeedUp = 0.16 ; // percent output for arm up (stronger – fighting gravity)
+        public static final double intakeArmOscillateSpeedDown = 0.13; // percent output for arm down
+        public static final double intakeArmOscillateInterval = 0.19; // seconds per direction switch
 
     }
 

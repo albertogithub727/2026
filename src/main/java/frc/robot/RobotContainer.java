@@ -11,11 +11,15 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.Optional;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.AimAndDriveCommand;
@@ -76,11 +80,10 @@ public class RobotContainer {
     // private final JoystickButton singleAutoShoot = new JoystickButton(singleController, XboxController.Button.kStart.value);
 
     /* Hood Presets */
-    private final double[] hoodPresets = {0, 15, 35, 85};
+    private final double[] hoodPresets = {0, 15, 35, 92};
     private int hoodPresetIndex = 0;
-
-    /* Shooting strafe offset (oscillated during shoot sequence) */
-    private double shootingStrafeOffset = 0.0;
+    private final Timer strafeOscillateTimer = new Timer();
+    private boolean strafeOscillateActive = false;
 
     /* Subsystems */
     private final Swerve swerve = new Swerve();
@@ -100,7 +103,7 @@ public class RobotContainer {
                 () -> -driver.getRawAxis(translationAxis),
                 () -> -driver.getRawAxis(strafeAxis)
                     + (driver.getLeftBumperButton() ? -0.2 : 0) + (driver.getRightBumperButton() ? 0.2 : 0)
-                    + shootingStrafeOffset,
+                    + getStrafeOscillation(),
                 () -> -driver.getRawAxis(rotationAxis),
                 () -> robotCentric.getAsBoolean()
             )
@@ -144,7 +147,7 @@ public class RobotContainer {
         }));
         NamedCommands.registerCommand("ShooterHood15", new InstantCommand(() -> {
             hood.setPosition(20);
-            shooter.setRPM(3500);
+            shooter.setRPM(3300);
         }));
         final double[] feederStartPos = {0.0};
         NamedCommands.registerCommand("FeederOn", new FunctionalCommand(
@@ -153,6 +156,7 @@ public class RobotContainer {
                 feederStartPos[0] = flywheel.getPosition1();
                 shooter.runFeeder(Constants.Shooter.feederSpeed);
                 flywheel.setVelocity2(-2000);
+                intake.setPercent(-.25f);
             },
             // execute - no-op
             () -> {},
@@ -236,9 +240,15 @@ public class RobotContainer {
             shooter, intake
         ));
 
-        /* Track Controls */
-        feederButton2.onTrue(new InstantCommand(() -> flywheel.setVelocity2(-2000)));
-        feederButton2.onFalse(new InstantCommand(() -> flywheel.setVelocity2(0)));
+        /* Driver2 A Button - Hold to strafe side-to-side while shooting */
+        feederButton2.onTrue(new InstantCommand(() -> {
+            strafeOscillateActive = true;
+            strafeOscillateTimer.restart();
+        }));
+        feederButton2.onFalse(new InstantCommand(() -> {
+            strafeOscillateActive = false;
+            strafeOscillateTimer.stop();
+        }));
 
         // INTAKE DOWN - Driver D-Pad Up (hold for 30% power)
         new Trigger(() -> driver.getPOV() == 0)
@@ -355,30 +365,9 @@ public class RobotContainer {
             )
         );
 
-        /* Shooter Control - Right Trigger (speed based on hood preset + strafe after delay) */
-        final double[] strafeStart = {0.0};
+        /* Shooter Control - Right Trigger (speed based on hood preset) */
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
-            .whileTrue(Commands.parallel(
-                new ShootCommand(shooter, flywheel, intake, this::setShooterForPreset),
-                new FunctionalCommand(
-                    () -> {
-                        strafeStart[0] = Timer.getFPGATimestamp();
-                        shootingStrafeOffset = 0.0;
-                    },
-                    () -> {
-                        double elapsed = Timer.getFPGATimestamp() - strafeStart[0];
-                        if (elapsed >= Constants.Shooter.shootStrafeDelay) {
-                            double strafeElapsed = (elapsed - Constants.Shooter.shootStrafeDelay)
-                                % (Constants.Shooter.shootStrafeInterval * 2);
-                            shootingStrafeOffset = strafeElapsed < Constants.Shooter.shootStrafeInterval
-                                ? Constants.Shooter.shootStrafeSpeed
-                                : -Constants.Shooter.shootStrafeSpeed;
-                        }
-                    },
-                    (interrupted) -> { shootingStrafeOffset = 0.0; },
-                    () -> false
-                )
-            ));
+            .whileTrue(new ShootCommand(shooter, flywheel, intake, this::setShooterForPreset));
 
         /* ===== SINGLE CONTROLLER (port 5) ===== */
         /*
@@ -469,6 +458,15 @@ public class RobotContainer {
         );
     }
 
+    private double getStrafeOscillation() {
+        if (!strafeOscillateActive) return 0.0;
+        double time = strafeOscillateTimer.get();
+        double interval = Constants.Shooter.shootStrafeInterval;
+        return ((int)(time / interval) % 2 == 0)
+            ? Constants.Shooter.shootStrafeSpeed
+            : -Constants.Shooter.shootStrafeSpeed;
+    }
+
     private Command updateVisionCommand() {
         return limelight.run(() -> {
             final Pose2d currentRobotPose = swerve.getPose();
@@ -506,7 +504,7 @@ public class RobotContainer {
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterSpeedHoodDown + " duty cycle");
                 break;
             case 1:
-                shooter.setRPM(3500);
+                shooter.setRPM(3750);
                 SmartDashboard.putString("Shooter Power", "3000 RPM");
                 break;
             case 2:

@@ -41,10 +41,10 @@ public class Shooter extends SubsystemBase {
     private double dashboardTargetRPM = 0.0;
 
     public Shooter() {
-        leftMotor = new TalonFX(Ports.kShooterLeft, Ports.kRoboRioCANBus);
-        middleMotor = new TalonFX(Ports.kShooterMiddle, Ports.kRoboRioCANBus);
-        rightMotor = new TalonFX(Ports.kShooterRight, Ports.kRoboRioCANBus);
-        feeder = new TalonFX(Ports.kShooterFeeder, Ports.kRoboRioCANBus);
+        leftMotor = new TalonFX(Ports.kShooterLeft);
+        middleMotor = new TalonFX(Ports.kShooterMiddle);
+        rightMotor = new TalonFX(Ports.kShooterRight);
+        feeder = new TalonFX(Ports.kShooterFeeder);
         shooterMotors = List.of(leftMotor, middleMotor, rightMotor);
 
         configureShooterMotor(leftMotor, InvertedValue.Clockwise_Positive);
@@ -71,7 +71,7 @@ public class Shooter extends SubsystemBase {
             )
             .withSlot0(
                 new Slot0Configs()
-                    .withKP(3.0)
+                    .withKP(3.4)
                     .withKI(0.5)
                     .withKD(0.01)
                     .withKV(12.25 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))

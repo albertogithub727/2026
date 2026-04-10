@@ -12,6 +12,7 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -20,6 +21,9 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -34,6 +38,16 @@ public class Swerve extends SubsystemBase {
     private final SwerveDrivePoseEstimator poseEstimator;
     private final Field2d field;
     private boolean agitating = false;
+
+    /* AdvantageScope 3D field publishers */
+    private final StructPublisher<Pose3d> robotPose3dPublisher;
+    private final StructPublisher<Pose2d> robotPose2dPublisher;
+    private final StructArrayPublisher<SwerveModuleState> actualStatesPublisher;
+    private final StructArrayPublisher<SwerveModuleState> desiredStatesPublisher;
+
+    /* Simulation state */
+    private SwerveModuleState[] lastDesiredStates = new SwerveModuleState[4];
+    private double simYawDegrees = 0;
 
     public Swerve() {
         gyro = new Pigeon2(Constants.Swerve.pigeonID);
@@ -56,6 +70,13 @@ public class Swerve extends SubsystemBase {
 
         field = new Field2d();
         SmartDashboard.putData("Field", field);
+
+        /* AdvantageScope 3D field publishers */
+        var nt = NetworkTableInstance.getDefault();
+        robotPose3dPublisher = nt.getStructTopic("Robot/Pose3d", Pose3d.struct).publish();
+        robotPose2dPublisher = nt.getStructTopic("Robot/Pose2d", Pose2d.struct).publish();
+        actualStatesPublisher = nt.getStructArrayTopic("Robot/ActualStates", SwerveModuleState.struct).publish();
+        desiredStatesPublisher = nt.getStructArrayTopic("Robot/DesiredStates", SwerveModuleState.struct).publish();
 
         setupPathPlanner();
     }
@@ -146,6 +167,8 @@ public class Swerve extends SubsystemBase {
         for (SwerveModule mod : swerveModules) {
             mod.setDesiredState(swerveModuleStates[mod.moduleNumber], isOpenLoop, agitating);
         }
+
+        lastDesiredStates = swerveModuleStates;
     }
 
     /**
@@ -154,10 +177,12 @@ public class Swerve extends SubsystemBase {
      */
     public void setModuleStates(SwerveModuleState[] desiredStates) {
         SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, Constants.Swerve.maxSpeed);
-        
+
         for (SwerveModule mod : swerveModules) {
             mod.setDesiredState(desiredStates[mod.moduleNumber], false);
         }
+
+        lastDesiredStates = desiredStates;
     }
 
     /**
@@ -271,6 +296,26 @@ public class Swerve extends SubsystemBase {
 
     public void addVisionMeasurement(Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> stdDevs) {
         poseEstimator.addVisionMeasurement(visionPose, timestampSeconds, stdDevs);
+        field.getObject("Vision Pose").setPose(visionPose);
+    }
+
+    @Override
+    public void simulationPeriodic() {
+        final double dt = 0.02; // 20ms loop period
+
+        if (lastDesiredStates[0] == null) return;
+
+        // Compute the chassis speeds from the last commanded module states
+        ChassisSpeeds speeds = Constants.Swerve.swerveKinematics.toChassisSpeeds(lastDesiredStates);
+
+        // Integrate heading
+        simYawDegrees += Math.toDegrees(speeds.omegaRadiansPerSecond) * dt;
+        gyro.getSimState().setRawYaw(simYawDegrees);
+
+        // Update each module's simulated sensors
+        for (SwerveModule mod : swerveModules) {
+            mod.simulationUpdate(lastDesiredStates[mod.moduleNumber], dt);
+        }
     }
 
     @Override
@@ -279,6 +324,14 @@ public class Swerve extends SubsystemBase {
         poseEstimator.update(getGyroYaw(), getModulePositions());
 
         field.setRobotPose(getPose());
+
+        // Publish structured data for AdvantageScope 3D field
+        robotPose2dPublisher.set(getPose());
+        robotPose3dPublisher.set(new Pose3d(getPose()));
+        actualStatesPublisher.set(getModuleStates());
+        if (lastDesiredStates[0] != null) {
+            desiredStatesPublisher.set(lastDesiredStates);
+        }
 
         // Log data to SmartDashboard
         SmartDashboard.putNumber("Gyro Yaw", getGyroYaw().getDegrees());

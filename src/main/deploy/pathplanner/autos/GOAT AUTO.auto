@@ -11,15 +11,28 @@
           }
         },
         {
-          "type": "path",
+          "type": "wait",
           "data": {
-            "pathName": "path1"
+            "waitTime": 0.2
           }
         },
         {
-          "type": "wait",
+          "type": "deadline",
           "data": {
-            "waitTime": 1.5
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "path1 mirrored"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "IntakeOn"
+                }
+              }
+            ]
           }
         },
         {
@@ -29,19 +42,13 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "seperate route"
+                  "pathName": "seperate route mirrored"
                 }
               },
               {
                 "type": "named",
                 "data": {
                   "name": "ShooterRPMOn"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "IntakeDown"
                 }
               }
             ]
@@ -93,7 +100,7 @@
                           {
                             "type": "path",
                             "data": {
-                              "pathName": "seperate 2.0"
+                              "pathName": "seperate 2.0 mirrored"
                             }
                           },
                           {

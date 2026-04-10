@@ -1,5 +1,6 @@
 package frc.robot;
 
+import com.ctre.phoenix6.SignalLogger;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
@@ -80,8 +81,9 @@ public class RobotContainer {
     // private final JoystickButton singleAutoShoot = new JoystickButton(singleController, XboxController.Button.kStart.value);
 
     /* Hood Presets */
-    private final double[] hoodPresets = {0, 15, 35, 92};
+    private final double[] hoodPresets = {0, 15, 41, 70};
     private int hoodPresetIndex = 0;
+    private double currentShooterRPM = 0; // Track current RPM for boost calculation
     private final Timer strafeOscillateTimer = new Timer();
     private boolean strafeOscillateActive = false;
 
@@ -97,6 +99,7 @@ public class RobotContainer {
 
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer() {
+        SignalLogger.enableAutoLogging(false);
         swerve.setDefaultCommand(
             new TeleopSwerve(
                 swerve,
@@ -141,14 +144,28 @@ public class RobotContainer {
             () -> shooter.setPercentOutput(Constants.Shooter.shooterSpeed), () -> shooter.stopAll(), shooter));
         NamedCommands.registerCommand("ShooterSpinUpRPM",
             new ShootCommand(shooter, flywheel, intake, () -> shooter.setRPM(Constants.Shooter.shooterRPM)));
-        NamedCommands.registerCommand("ShooterRPMOn", new InstantCommand(() -> {
-            shooter.setRPM(Constants.Shooter.autoShooterRPM);
-            intake.intake();
-        }));
-        NamedCommands.registerCommand("ShooterHood15", new InstantCommand(() -> {
-            hood.setPosition(20);
-            shooter.setRPM(3300);
-        }));
+        NamedCommands.registerCommand("ShooterRPMOn", Commands.sequence(
+            // Start at boosted RPM + intake
+            new InstantCommand(() -> {
+                shooter.setRPM(Constants.Shooter.autoShooterRPM + 200);
+                intake.intake();
+            }),
+            // Wait 1 second with boost (ramp-up)
+            Commands.waitSeconds(1.0),
+            // Drop to base RPM
+            new InstantCommand(() -> shooter.setRPM(Constants.Shooter.autoShooterRPM))
+        ));
+        NamedCommands.registerCommand("ShooterHood15", Commands.sequence(
+            // Set hood and start at boosted RPM
+            new InstantCommand(() -> {
+                hood.setPosition(19);
+                shooter.setRPM(3575);  // 3400 + 200 RPM boost
+            }),
+            // Wait 1 second with boost
+            Commands.waitSeconds(1.0),
+            // Drop to base RPM
+            new InstantCommand(() -> shooter.setRPM(3250))
+        ));
         final double[] feederStartPos = {0.0};
         NamedCommands.registerCommand("FeederOn", new FunctionalCommand(
             // init - save starting position, start feeder + track
@@ -250,22 +267,6 @@ public class RobotContainer {
             strafeOscillateTimer.stop();
         }));
 
-        // INTAKE DOWN - Driver D-Pad Up (hold for 30% power)
-        new Trigger(() -> driver.getPOV() == 0)
-            .whileTrue(new StartEndCommand(
-                () -> flywheel.setPercent1(-0.2),
-                () -> flywheel.setPercent1(0),
-                flywheel
-            ));
-
-        // INTAKE UP - Driver D-Pad Down (hold for 30% power)
-        new Trigger(() -> driver.getPOV() == 180)
-            .whileTrue(new StartEndCommand(
-                () -> flywheel.setPercent1(0.2),
-                () -> flywheel.setPercent1(0),
-                flywheel
-            ));
-
         /* Aim and Drive - Hold A to auto-aim at hub while driving */
         aimButton.whileTrue(new AimAndDriveCommand(
             swerve,
@@ -275,17 +276,17 @@ public class RobotContainer {
 
         /* Bumpers now used for strafing (added to default swerve command strafe supplier) */
 
-        /* Intake Control - Left Trigger (65%) */
+        /* Intake Control - Left Trigger (both motors) */
         new Trigger(() -> driver2.getLeftTriggerAxis() > 0.1)
             .whileTrue(new InstantCommand(() -> intake.intake(), intake))
             .onFalse(new InstantCommand(() -> intake.stop(), intake));
 
-        /* Intake Control - D-Pad Left (100%) */
+        /* INTAKE DOWN - D-Pad Left (hold for 20% power) */
         new Trigger(() -> driver2.getPOV() == 270)
             .whileTrue(new StartEndCommand(
-                () -> intake.setPercent(-1.0),
-                () -> intake.stop(),
-                intake
+                () -> flywheel.setPercent1(-0.2),
+                () -> flywheel.setPercent1(0),
+                flywheel
             ));
 
         /* Hood Preset - D-Pad Up (cycle up: 0 -> 0.32 -> 1.0) */
@@ -308,24 +309,12 @@ public class RobotContainer {
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
             }, hood));
 
-        /* Prepare Shot + Auto-Aim - D-Pad Right (hold to aim, spin up shooter, position hood, then feed after delay) */
+        /* INTAKE UP - D-Pad Right (hold for 20% power) */
         new Trigger(() -> driver2.getPOV() == 90)
-            .whileTrue(Commands.parallel(
-                new AimAndDriveCommand(swerve,
-                    () -> -driver.getRawAxis(translationAxis),
-                    () -> -driver.getRawAxis(strafeAxis)),
-                new PrepareShotCommand(shooter, hood, swerve::getPose),
-                Commands.waitSeconds(Constants.Shooter.feederDelay)
-                    .andThen(new StartEndCommand(
-                        () -> {
-                            shooter.runFeeder(Constants.Shooter.feederSpeed);
-                            flywheel.setVelocity2(-2000);
-                        },
-                        () -> {
-                            shooter.runFeeder(0);
-                            flywheel.setVelocity2(0);
-                        }
-                    ))
+            .whileTrue(new StartEndCommand(
+                () -> flywheel.setPercent1(0.2),
+                () -> flywheel.setPercent1(0),
+                flywheel
             ));
 
         /* ============================================================
@@ -367,7 +356,7 @@ public class RobotContainer {
 
         /* Shooter Control - Right Trigger (speed based on hood preset) */
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
-            .whileTrue(new ShootCommand(shooter, flywheel, intake, this::setShooterForPreset));
+            .whileTrue(createShootCommandForPreset());
 
         /* ===== SINGLE CONTROLLER (port 5) ===== */
         /*
@@ -497,26 +486,42 @@ public class RobotContainer {
         return intake;
     }
 
+    private Command createShootCommandForPreset() {
+        return Commands.deferredProxy(() -> {
+            setShooterForPreset();
+            // Hood preset 2 gets reduced RPM boost (100 instead of 200)
+            double rpmBoost = (hoodPresetIndex == 2) ? 100 : 200;
+            // Hood preset 2 gets longer feeder delay (2.5s instead of 2s)
+            double feederDelay = (hoodPresetIndex == 2) ? 2.5 : Constants.Shooter.feederDelay;
+            return new ShootCommand(shooter, flywheel, intake, () -> {}, currentShooterRPM, rpmBoost, feederDelay);
+        });
+    }
+
     private void setShooterForPreset() {
         switch (hoodPresetIndex) {
             case 0:
                 shooter.setPercentOutput(Constants.Shooter.shooterSpeedHoodDown);
+                currentShooterRPM = 0; // Duty cycle mode, no RPM boost
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterSpeedHoodDown + " duty cycle");
                 break;
             case 1:
-                shooter.setRPM(3750);
-                SmartDashboard.putString("Shooter Power", "3000 RPM");
+                currentShooterRPM = 2810;
+                shooter.setRPM(currentShooterRPM);
+                SmartDashboard.putString("Shooter Power", "2875 RPM");
                 break;
             case 2:
-                shooter.setRPM(Constants.Shooter.shooterRPM);
+                currentShooterRPM = Constants.Shooter.shooterRPM;
+                shooter.setRPM(currentShooterRPM);
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterRPM + " RPM");
                 break;
             case 3:
-                shooter.setRPM(4000);
-                SmartDashboard.putString("Shooter Power", "3900 RPM");
+                currentShooterRPM = 3200;
+                shooter.setRPM(currentShooterRPM);
+                SmartDashboard.putString("Shooter Power", "3200 RPM");
                 break;
             default:
-                shooter.setRPM(Constants.Shooter.shooterRPM);
+                currentShooterRPM = Constants.Shooter.shooterRPM;
+                shooter.setRPM(currentShooterRPM);
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterRPM + " RPM");
                 break;
         }

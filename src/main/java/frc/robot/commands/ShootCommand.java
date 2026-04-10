@@ -13,16 +13,34 @@ public class ShootCommand extends Command {
     private final Intake intake;
     private final Runnable shooterSpeedSetup;
     private final Timer timer = new Timer();
+    private double baseRPM;
+    private double rpmBoost;
+    private double feederDelay;
 
     public ShootCommand(Shooter shooter, Flywheel flywheel, Intake intake) {
-        this(shooter, flywheel, intake, () -> shooter.setRPM(Constants.Shooter.shooterRPM));
+        this(shooter, flywheel, intake, () -> shooter.setRPM(Constants.Shooter.shooterRPM), Constants.Shooter.shooterRPM, 200, Constants.Shooter.feederDelay);
     }
 
     public ShootCommand(Shooter shooter, Flywheel flywheel, Intake intake, Runnable shooterSpeedSetup) {
+        this(shooter, flywheel, intake, shooterSpeedSetup, 0, 200, Constants.Shooter.feederDelay);
+    }
+
+    public ShootCommand(Shooter shooter, Flywheel flywheel, Intake intake, Runnable shooterSpeedSetup, double baseRPM) {
+        this(shooter, flywheel, intake, shooterSpeedSetup, baseRPM, 200, Constants.Shooter.feederDelay);
+    }
+
+    public ShootCommand(Shooter shooter, Flywheel flywheel, Intake intake, Runnable shooterSpeedSetup, double baseRPM, double rpmBoost) {
+        this(shooter, flywheel, intake, shooterSpeedSetup, baseRPM, rpmBoost, Constants.Shooter.feederDelay);
+    }
+
+    public ShootCommand(Shooter shooter, Flywheel flywheel, Intake intake, Runnable shooterSpeedSetup, double baseRPM, double rpmBoost, double feederDelay) {
         this.shooter = shooter;
         this.flywheel = flywheel;
         this.intake = intake;
         this.shooterSpeedSetup = shooterSpeedSetup;
+        this.baseRPM = baseRPM;
+        this.rpmBoost = rpmBoost;
+        this.feederDelay = feederDelay;
         addRequirements(shooter, flywheel, intake);
     }
 
@@ -36,13 +54,24 @@ public class ShootCommand extends Command {
     public void execute() {
         double elapsed = timer.get();
 
-        if (elapsed >= Constants.Shooter.feederDelay) {
+        if (elapsed >= feederDelay) {
+            // RPM boost for the first second after feeder starts (only if using RPM control)
+            double timeSinceFeeder = elapsed - feederDelay;
+            if (baseRPM > 0) {
+                if (timeSinceFeeder < 1.0) {
+                    // Boost RPM for first balls (amount configurable per preset)
+                    shooter.setRPM(baseRPM + rpmBoost);
+                } else {
+                    // Return to normal RPM after 1 second
+                    shooter.setRPM(baseRPM);
+                }
+            }
+
             shooter.runFeeder(Constants.Shooter.feederSpeed);
-            flywheel.setVelocity2(-500);
+            flywheel.setVelocity2(-6000);
             intake.intake2();
 
             // Oscillate intake arm up and down (like D-pad up/down)
-            double timeSinceFeeder = elapsed - Constants.Shooter.feederDelay;
             int cycleIndex = (int) (timeSinceFeeder / Constants.Shooter.intakeArmOscillateInterval);
             if (cycleIndex % 2 == 0) {
                 flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp);

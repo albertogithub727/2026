@@ -1,9 +1,6 @@
 package frc.robot;
 
 public final class Ports {
-    // CAN Bus
-    public static final String kRoboRioCANBus = "";
-
     // Shooter motors (CAN IDs)
     public static final int kShooterLeft = 0;
     public static final int kShooterMiddle = 12;

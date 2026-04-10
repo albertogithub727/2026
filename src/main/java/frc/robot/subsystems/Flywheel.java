@@ -17,6 +17,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Flywheel extends SubsystemBase {
+    private static final double MOTOR1_MIN_POSITION = 0.0;
+    private static final double MOTOR1_MAX_POSITION = 13.0;
+
     private final TalonFX flywheelMotor;
     private final TalonFX flywheelMotor2;
 
@@ -40,6 +43,7 @@ public class Flywheel extends SubsystemBase {
     private double targetPosition2 = 0.0;
     private boolean motor1Extended = false;
     private boolean motor2Extended = false;
+    private boolean motor1InDutyCycle = false;
 
     public Flywheel() {
         flywheelMotor = new TalonFX(Constants.Flywheel.motorID);
@@ -109,7 +113,14 @@ public class Flywheel extends SubsystemBase {
     }
 
     public void setPercent1(double percent) {
+        motor1InDutyCycle = true;
         targetVelocityRPS = 0.0;
+        double position = getPosition1();
+        if (position <= MOTOR1_MIN_POSITION && percent < 0) {
+            percent = 0;
+        } else if (position >= MOTOR1_MAX_POSITION && percent > 0) {
+            percent = 0;
+        }
         dutyCycleControl.Output = percent;
         flywheelMotor.setControl(dutyCycleControl);
     }
@@ -120,6 +131,8 @@ public class Flywheel extends SubsystemBase {
     }
 
     public void setPosition1(double rotations) {
+        motor1InDutyCycle = false;
+        rotations = Math.max(MOTOR1_MIN_POSITION, Math.min(MOTOR1_MAX_POSITION, rotations));
         targetPosition = rotations;
         positionControl.Position = rotations;
         flywheelMotor.setControl(positionControl);
@@ -260,6 +273,16 @@ public class Flywheel extends SubsystemBase {
 
     @Override
     public void periodic() {
+        double motor1Pos = getPosition1();
+        if (motor1InDutyCycle) {
+            if ((motor1Pos < MOTOR1_MIN_POSITION && dutyCycleControl.Output < 0)
+                    || (motor1Pos > MOTOR1_MAX_POSITION && dutyCycleControl.Output > 0)) {
+                dutyCycleControl.Output = 0;
+                flywheelMotor.setControl(dutyCycleControl);
+            }
+        }
+
+        SmartDashboard.putNumber("Flywheel/Motor1 Position", motor1Pos);
         SmartDashboard.putNumber("Flywheel/Velocity1 RPS", getVelocityRPS());
         SmartDashboard.putNumber("Flywheel/Velocity2 RPS", getVelocity2RPS());
         SmartDashboard.putNumber("Flywheel/Target1 RPS", targetVelocityRPS);

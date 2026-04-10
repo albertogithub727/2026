@@ -18,6 +18,9 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import frc.robot.Constants;
 import frc.robot.SwerveModuleConstants;
 
+import com.ctre.phoenix6.sim.CANcoderSimState;
+import com.ctre.phoenix6.sim.TalonFXSimState;
+
 public class SwerveModule {
     public int moduleNumber;
     private Rotation2d angleOffset;
@@ -193,6 +196,36 @@ public class SwerveModule {
         /* Get position directly from encoder (not status signal) to avoid null during init */
         double absolutePosition = angleEncoder.getAbsolutePosition().getValueAsDouble();
         angleMotor.setPosition(absolutePosition);
+    }
+
+    /**
+     * Update simulated hardware state for this module.
+     * Feeds simulated positions/velocities into the Phoenix 6 sim state
+     * so that getPosition()/getState() return realistic values in simulation.
+     */
+    public void simulationUpdate(SwerveModuleState desiredState, double dtSeconds) {
+        TalonFXSimState driveSimState = driveMotor.getSimState();
+        TalonFXSimState angleSimState = angleMotor.getSimState();
+        CANcoderSimState encoderSimState = angleEncoder.getSimState();
+
+        // Provide supply voltage so sim devices are "powered"
+        driveSimState.setSupplyVoltage(12.0);
+        angleSimState.setSupplyVoltage(12.0);
+        encoderSimState.setSupplyVoltage(12.0);
+
+        // Drive: integrate velocity into position (rotor rotations, pre-gear-ratio)
+        double wheelRotationsPerSec = desiredState.speedMetersPerSecond / Constants.Swerve.wheelCircumference;
+        double driveRotorDelta = wheelRotationsPerSec * dtSeconds * Constants.Swerve.driveGearRatio;
+        driveSimState.addRotorPosition(driveRotorDelta);
+        driveSimState.setRotorVelocity(wheelRotationsPerSec * Constants.Swerve.driveGearRatio);
+
+        // Angle: snap to desired angle (rotor rotations, pre-gear-ratio)
+        double desiredAngleRotations = desiredState.angle.getRotations();
+        angleSimState.setRawRotorPosition(desiredAngleRotations * Constants.Swerve.angleGearRatio);
+        angleSimState.setRotorVelocity(0);
+
+        // CANcoder: set to same mechanism angle (rotations)
+        encoderSimState.setRawPosition(desiredAngleRotations);
     }
 
     private double rotationsToMeters(double rotations) {

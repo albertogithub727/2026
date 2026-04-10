@@ -13,12 +13,10 @@ public class Intake extends SubsystemBase {
     private final TalonFX intakeMotor;
     private final DutyCycleOut dutyCycleControl = new DutyCycleOut(0);
 
-    // TODO: Set your intake motor CAN ID
     private static final int INTAKE_MOTOR_ID = 11;
-    
-    // TODO: Adjust motor invert if needed
+
     private static final InvertedValue MOTOR_INVERT = InvertedValue.CounterClockwise_Positive;
-    
+
     // Current limiting
     private static final int SUPPLY_CURRENT_LIMIT = 30;
     private static final int STATOR_CURRENT_LIMIT = 60;
@@ -58,11 +56,13 @@ public class Intake extends SubsystemBase {
      * Run the intake at full speed forward
      */
     public void intake() {
-        setPercent(-1 );
+        setPercent(-1);
     }
- public void intake2() {
-        setPercent(-.25 );
+
+    public void intake2() {
+        setPercent(-.25);
     }
+
     /**
      * Run the intake at full speed backward (outtake)
      */

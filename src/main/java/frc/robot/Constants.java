@@ -140,11 +140,11 @@ public final class Constants {
 
         /* Shooter Speed */
         public static final double shooterSpeed = .57; // duty cycle for reverse/unjam
-        public static final double shooterRPM = 3900; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
-        public static final double autoShooterRPM = 3575; // slightly slower RPM for autonomous
+        public static final double shooterRPM = 3400; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
+        public static final double autoShooterRPM = 3050; // slightly slower RPM for autonomous
         public static final double shooterSpeedHoodDown = 0.5; // duty cycle for hood preset 0
         public static final double shooterSpeedHoodUp = 0.8; // duty cycle for hood preset 1
-        public static final double feederSpeed = .8;
+        public static final double feederSpeed = 1;
 
         /* Delay before feeder starts (seconds) */
         public static final double feederDelay = 2;
@@ -161,7 +161,7 @@ public final class Constants {
         /* Intake arm oscillation during shooting (flywheel motor 1) */
         public static final double intakeArmOscillateSpeedUp = 0.16 ; // percent output for arm up (stronger – fighting gravity)
         public static final double intakeArmOscillateSpeedDown = 0.13; // percent output for arm down
-        public static final double intakeArmOscillateInterval = 0.19; // seconds per direction switch
+        public static final double intakeArmOscillateInterval = 0.38; // seconds per direction switch
 
     }
 

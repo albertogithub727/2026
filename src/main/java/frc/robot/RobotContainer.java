@@ -59,6 +59,7 @@ public class RobotContainer {
     // Linear Actuator controls - HOLD TO MOVE
     private final JoystickButton extendActuator = new JoystickButton(driver, XboxController.Button.kLeftBumper.value);
     private final JoystickButton retractActuator = new JoystickButton(driver, XboxController.Button.kRightBumper.value);
+    private final JoystickButton operatorRightBumper = new JoystickButton(driver2, XboxController.Button.kRightBumper.value);
 
     // Aim and Drive - HOLD TO AUTO-AIM
     private final JoystickButton aimButton = new JoystickButton(driver, XboxController.Button.kA.value);
@@ -358,6 +359,15 @@ public class RobotContainer {
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
             .whileTrue(createShootCommandForPreset());
 
+        /* Operator Right Bumper - Shoot with hood at 70, RPM 4700, no feeder delay */
+        operatorRightBumper.whileTrue(
+            Commands.deferredProxy(() -> {
+                hood.setPosition(70);
+                return new ShootCommand(shooter, flywheel, intake,
+                    () -> shooter.setRPM(4700), 4700, 200, 0);
+            })
+        );
+
         /* ===== SINGLE CONTROLLER (port 5) ===== */
         /*
         singleZeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
@@ -515,7 +525,7 @@ public class RobotContainer {
                 SmartDashboard.putString("Shooter Power", Constants.Shooter.shooterRPM + " RPM");
                 break;
             case 3:
-                currentShooterRPM = 3200;
+                currentShooterRPM = 4700;
                 shooter.setRPM(currentShooterRPM);
                 SmartDashboard.putString("Shooter Power", "3200 RPM");
                 break;

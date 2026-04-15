@@ -10,6 +10,7 @@ import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -65,7 +66,12 @@ public class Swerve extends SubsystemBase {
             Constants.Swerve.swerveKinematics,
             getGyroYaw(),
             getModulePositions(),
-            new Pose2d()
+            new Pose2d(),
+            // Odometry std devs (x meters, y meters, rotation radians).
+            // Higher values = less trust in wheel odometry.
+            VecBuilder.fill(0.5, 0.5, 0.1),
+            // Vision std devs — placeholder, overridden per-measurement by Limelight
+            VecBuilder.fill(0.9, 0.9, 9999999)
         );
 
         field = new Field2d();
@@ -258,9 +264,18 @@ public class Swerve extends SubsystemBase {
         return Rotation2d.fromDegrees(gyro.getYaw().getValueAsDouble());
     }
 
-     public ChassisSpeeds getSpeeds() {
+    public ChassisSpeeds getSpeeds() {
         return Constants.Swerve.swerveKinematics.toChassisSpeeds(getModuleStates());
-      }
+    }
+
+    /**
+     * Returns the robot's current angular velocity in degrees per second.
+     * Used by the Limelight subsystem to reject vision updates while spinning
+     * (motion blur and gyro lag degrade pose estimates during fast rotation).
+     */
+    public double getAngularVelocityDegS() {
+        return Math.toDegrees(getSpeeds().omegaRadiansPerSecond);
+    }
 
     /**
      * Zero the gyro.
@@ -284,6 +299,23 @@ public class Swerve extends SubsystemBase {
         for (SwerveModule mod : swerveModules) {
             mod.resetToAbsolute();
         }
+    }
+
+    /**
+     * Set all modules to a 45-degree X pattern with zero speed.
+     * This resists being pushed from any direction.
+     */
+    public void lockModules() {
+        SwerveModuleState[] xStates = new SwerveModuleState[] {
+            new SwerveModuleState(0, Rotation2d.fromDegrees(45)),
+            new SwerveModuleState(0, Rotation2d.fromDegrees(-45)),
+            new SwerveModuleState(0, Rotation2d.fromDegrees(-45)),
+            new SwerveModuleState(0, Rotation2d.fromDegrees(45))
+        };
+        for (SwerveModule mod : swerveModules) {
+            mod.setDesiredState(xStates[mod.moduleNumber], false);
+        }
+        lastDesiredStates = xStates;
     }
 
     public void setAgitating(boolean agitating) {

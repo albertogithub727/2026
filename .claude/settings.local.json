@@ -17,7 +17,11 @@
       "Bash(JAVA_HOME=\"C:/Users/Public/wpilib/2026/jdk\" ./gradlew.bat:*)",
       "Bash(powershell -Command:*)",
       "WebFetch(domain:www.frcmanual.com)",
-      "WebFetch(domain:docs.wpilib.org)"
+      "WebFetch(domain:docs.wpilib.org)",
+      "Bash(jar:*)",
+      "Bash(unzip:*)",
+      "Bash(javap:*)",
+      "Bash(python3:*)"
     ]
   }
 }

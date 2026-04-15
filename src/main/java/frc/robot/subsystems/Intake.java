@@ -2,8 +2,10 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -11,9 +13,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Intake extends SubsystemBase {
     private final TalonFX intakeMotor;
+    private final TalonFX intakeMotorFollower;
     private final DutyCycleOut dutyCycleControl = new DutyCycleOut(0);
 
     private static final int INTAKE_MOTOR_ID = 11;
+    private static final int INTAKE_FOLLOWER_ID = 20;
 
     private static final InvertedValue MOTOR_INVERT = InvertedValue.CounterClockwise_Positive;
 
@@ -24,7 +28,11 @@ public class Intake extends SubsystemBase {
 
     public Intake() {
         intakeMotor = new TalonFX(INTAKE_MOTOR_ID);
+        intakeMotorFollower = new TalonFX(INTAKE_FOLLOWER_ID);
         configMotor();
+
+        // Follow the primary motor with inverted direction (motors face opposite ways)
+        intakeMotorFollower.setControl(new Follower(INTAKE_MOTOR_ID, MotorAlignmentValue.Opposed));
     }
 
     private void configMotor() {
@@ -56,7 +64,7 @@ public class Intake extends SubsystemBase {
      * Run the intake at full speed forward
      */
     public void intake() {
-        setPercent(-1);
+        setPercent(1);
     }
 
     public void intake2() {
@@ -67,10 +75,11 @@ public class Intake extends SubsystemBase {
      * Run the intake at full speed backward (outtake)
      */
     public void outtake() {
-        setPercent(1.0);
+        setPercent(-1.0);
     }
 
     /**
+     *
      * Stop the intake motor
      */
     public void stop() {

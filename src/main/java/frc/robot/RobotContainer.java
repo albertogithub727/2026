@@ -241,13 +241,17 @@ public class RobotContainer {
     private void configureButtonBindings() {
         /* Driver Buttons */
         zeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
+
+        /* B Button - X-lock swerve modules (hold to lock) */
+        new JoystickButton(driver, XboxController.Button.kB.value)
+            .whileTrue(Commands.run(() -> swerve.lockModules(), swerve));
         
         /* B Button - Reverse everything (hold to run) */
         feederButton.whileTrue(new StartEndCommand(
             () -> {
                 shooter.setPercentOutput(-Constants.Shooter.shooterSpeed);
                 shooter.runFeeder(-Constants.Shooter.feederSpeed);
-                intake.setPercent(0.65);
+                intake.setPercent(-0.65);
                 flywheel.setVelocity2(2000);
             },
             () -> {
@@ -466,11 +470,25 @@ public class RobotContainer {
             : -Constants.Shooter.shootStrafeSpeed;
     }
 
+    /** True after odometry has been seeded with the first valid vision pose. */
+    private boolean visionInitialized = false;
+
     private Command updateVisionCommand() {
         return limelight.run(() -> {
             final Pose2d currentRobotPose = swerve.getPose();
+
+            // Pass current angular velocity so Limelight can filter fast-spin estimates
+            limelight.setAngularVelocity(swerve.getAngularVelocityDegS());
+
             final Optional<Limelight.Measurement> measurement = limelight.getMeasurement(currentRobotPose);
             measurement.ifPresent(m -> {
+                // On the first valid vision reading, hard-reset odometry so the
+                // pose estimator starts at the correct field position instead of (0,0).
+                if (!visionInitialized) {
+                    swerve.resetPose(m.poseEstimate.pose);
+                    visionInitialized = true;
+                }
+
                 swerve.addVisionMeasurement(
                     m.poseEstimate.pose,
                     m.poseEstimate.timestampSeconds,

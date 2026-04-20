@@ -26,6 +26,7 @@ import frc.robot.commands.MoveActuator;
 import frc.robot.commands.PrepareShotCommand;
 import frc.robot.commands.ShootCommand;
 import frc.robot.commands.TeleopSwerve;
+import frc.robot.commands.ShooterTuningCommand;
 import frc.robot.subsystems.Flywheel;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Hood;
@@ -40,6 +41,8 @@ public class RobotContainer {
     /* Controllers */
     private final XboxController driver = new XboxController(0);
     private final XboxController driver2 = new XboxController(1);
+    private final XboxController tuningController = new XboxController(2);
+
     // private final XboxController singleController = new XboxController(5);
 
 
@@ -112,13 +115,6 @@ public class RobotContainer {
             )
         );
 
-        hood.setDefaultCommand(Commands.run(() -> {
-            if (shooter.isActive()) {
-                hood.setPosition(hoodPresets[hoodPresetIndex]);
-            } else {
-                hood.setPosition(0);
-            }
-        }, hood));
 
         limelight.setDefaultCommand(updateVisionCommand());
 
@@ -268,6 +264,9 @@ public class RobotContainer {
             },
             shooter, intake
         ));
+
+        new JoystickButton(tuningController, XboxController.Button.kBack.value)
+    .whileTrue(new ShooterTuningCommand(shooter, hood, swerve, tuningController));
 
         /* Driver2 Y Button - Hold to run feeder (TESTING) */
         new JoystickButton(driver2, XboxController.Button.kY.value)

@@ -164,7 +164,7 @@ public class Robot extends TimedRobot {
     /** This autonomous runs the autonomous command selected by your RobotContainer class. */
     @Override
     public void autonomousInit() {
-        robotContainer.getHood().setPosition(30);
+        //robotContainer.getHood().setPosition(0);
 
         autonomousCommand = robotContainer.getAutonomousCommand();
 
@@ -180,7 +180,6 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopInit() {
-        robotContainer.getHood().setPosition(30);
 
         // This makes sure that the autonomous stops running when teleop starts running.
         if (autonomousCommand != null) {

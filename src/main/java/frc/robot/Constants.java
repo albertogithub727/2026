@@ -82,7 +82,7 @@ public final class Constants {
         public static final class Mod0 {
             public static final int driveMotorID = 8;
             public static final int angleMotorID = 3;
-            public static final int canCoderID = 34;
+            public static final int canCoderID = 35;
             public static final Rotation2d angleOffset = Rotation2d.fromDegrees(48);
             public static final SwerveModuleConstants constants = 
                 new SwerveModuleConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
@@ -129,6 +129,7 @@ public final class Constants {
         public static final InvertedValue motor1Invert = InvertedValue.Clockwise_Positive;
         public static final InvertedValue motorInvert = InvertedValue.CounterClockwise_Positive;
         public static final InvertedValue feederInvert = InvertedValue.CounterClockwise_Positive;
+        public static final InvertedValue feeder2Invert = InvertedValue.Clockwise_Positive;
 
         /* Neutral Mode */
         public static final NeutralModeValue neutralMode = NeutralModeValue.Coast;
@@ -139,12 +140,12 @@ public final class Constants {
         public static final boolean enableCurrentLimit = true;
 
         /* Shooter Speed */
-        public static final double shooterSpeed = .57; // duty cycle for reverse/unjam
+        public static final double shooterSpeed = 0.5; // duty cycle for reverse/unjam
         public static final double shooterRPM = 3400; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
         public static final double autoShooterRPM = 3050; // slightly slower RPM for autonomous
         public static final double shooterSpeedHoodDown = 0.5; // duty cycle for hood preset 0
-        public static final double shooterSpeedHoodUp = 0.8; // duty cycle for hood preset 1
-        public static final double feederSpeed = 1;
+        public static final double shooterSpeedHoodUp = 0.5; // duty cycle for hood preset 1
+        public static final double feederSpeed = -1;
 
         /* Delay before feeder starts (seconds) */
         public static final double feederDelay = 2;
@@ -166,7 +167,7 @@ public final class Constants {
     }
 
     public static final class Flywheel {
-        public static final int motorID = 9; // TODO: Set your flywheel motor CAN ID
+        public static final int motorID = 22; // TODO: Set your flywheel motor CAN ID
         public static final int motor2ID = 10; // TODO: Set your second flywheel motor CAN ID
 
         /* Motor Invert */
@@ -202,6 +203,45 @@ public final class Constants {
         /* Motion Magic (for smooth position moves) */
         public static final double motionMagicCruiseVelocity = 40; // rotations per second
         public static final double motionMagicAcceleration = 35; // rotations per second^2
+    }
+
+    public static final class Hood {
+        public static final int motorID = 41;
+
+        /* Motor Invert */
+        public static final InvertedValue motorInvert = InvertedValue.CounterClockwise_Positive;
+
+        /* Neutral Mode */
+        public static final NeutralModeValue neutralMode = NeutralModeValue.Brake;
+
+        /* Current Limiting */
+        public static final int supplyCurrentLimit = 30;
+        public static final int statorCurrentLimit = 60;
+        public static final boolean enableCurrentLimit = true;
+
+        /* PID Values for Position Control (Slot 0) */
+        public static final double kP = 10.0; // TODO: Tune this value
+        public static final double kI = 0.0;
+        public static final double kD = 0.0;
+        public static final double kS = 0.0; // Static friction compensation
+        public static final double kV = 0.0; // Velocity feedforward
+        public static final double kG = 0.0; // Gravity feedforward
+
+        /* Motion Magic Parameters */
+        public static final double motionMagicCruiseVelocity = 20; // rotations per second
+        public static final double motionMagicAcceleration = 40; // rotations per second^2
+        public static final double motionMagicJerk = 200; // rotations per second^3
+
+        /* Position Limits (in rotations) */
+        public static final double minPosition = 0.0; // Fully down
+        public static final double maxPosition = 5.0; // Fully up (adjust based on mechanism)
+
+        /* Position Tolerance (rotations) */
+        public static final double positionTolerance = 0.01;
+
+        /* Preset Positions (in rotations) */
+        public static final double downPosition = 0.0;
+        public static final double upPosition = 0.35; // Adjust based on testing
     }
 
 }

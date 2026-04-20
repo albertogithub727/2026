@@ -9,8 +9,6 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import java.util.Optional;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -81,8 +79,8 @@ public class RobotContainer {
     // private final JoystickButton singleRetractActuator = new JoystickButton(singleController, XboxController.Button.kRightBumper.value);
     // private final JoystickButton singleAutoShoot = new JoystickButton(singleController, XboxController.Button.kStart.value);
 
-    /* Hood Presets */
-    private final double[] hoodPresets = {0, 15, 41, 70};
+    /* Hood Presets (in rotations) */
+    private final double[] hoodPresets = {0.0, 1, 2, 3};
     private int hoodPresetIndex = 0;
     private double currentShooterRPM = 0; // Track current RPM for boost calculation
     private final Timer strafeOscillateTimer = new Timer();
@@ -91,6 +89,7 @@ public class RobotContainer {
     /* Subsystems */
     private final Swerve swerve = new Swerve();
     private final Limelight limelight = new Limelight("limelight");
+    private final Limelight limelightLeft = new Limelight("limelight-left");
     private final Flywheel flywheel = new Flywheel();
     private final Intake intake = new Intake();
     private final Hood hood = new Hood();
@@ -112,6 +111,14 @@ public class RobotContainer {
                 () -> robotCentric.getAsBoolean()
             )
         );
+
+        hood.setDefaultCommand(Commands.run(() -> {
+            if (shooter.isActive()) {
+                hood.setPosition(hoodPresets[hoodPresetIndex]);
+            } else {
+                hood.setPosition(0);
+            }
+        }, hood));
 
         limelight.setDefaultCommand(updateVisionCommand());
 
@@ -159,7 +166,7 @@ public class RobotContainer {
         NamedCommands.registerCommand("ShooterHood15", Commands.sequence(
             // Set hood and start at boosted RPM
             new InstantCommand(() -> {
-                hood.setPosition(19);
+                hood.setPosition(0.11);  // Converted from 19mm to rotations
                 shooter.setRPM(3575);  // 3400 + 200 RPM boost
             }),
             // Wait 1 second with boost
@@ -262,6 +269,22 @@ public class RobotContainer {
             shooter, intake
         ));
 
+        /* Driver2 Y Button - Hold to run feeder (TESTING) */
+        new JoystickButton(driver2, XboxController.Button.kY.value)
+            .whileTrue(new StartEndCommand(
+                () -> shooter.runFeeder(-Constants.Shooter.feederSpeed),
+                () -> shooter.runFeeder(0),
+                shooter
+            ));
+
+        /* Driver2 X Button - Hold to run track motor (motor ID 10) only */
+        new JoystickButton(driver2, XboxController.Button.kX.value)
+            .whileTrue(new StartEndCommand(
+                () -> flywheel.setVelocity2(-2000),
+                () -> flywheel.setVelocity2(0),
+                flywheel
+            ));
+
         /* Driver2 A Button - Hold to strafe side-to-side while shooting */
         feederButton2.onTrue(new InstantCommand(() -> {
             strafeOscillateActive = true;
@@ -294,25 +317,23 @@ public class RobotContainer {
                 flywheel
             ));
 
-        /* Hood Preset - D-Pad Up (cycle up: 0 -> 0.32 -> 1.0) */
+        /* Hood Preset Up - D-Pad Up */
         new Trigger(() -> driver2.getPOV() == 0)
             .onTrue(new InstantCommand(() -> {
                 if (hoodPresetIndex < hoodPresets.length - 1) {
                     hoodPresetIndex++;
                 }
-                hood.setPosition(hoodPresets[hoodPresetIndex]);
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
-            }, hood));
+            }));
 
-        /* Hood Preset - D-Pad Down (cycle down: 1.0 -> 0.32 -> 0) */
+        /* Hood Preset Down - D-Pad Down */
         new Trigger(() -> driver2.getPOV() == 180)
             .onTrue(new InstantCommand(() -> {
                 if (hoodPresetIndex > 0) {
                     hoodPresetIndex--;
                 }
-                hood.setPosition(hoodPresets[hoodPresetIndex]);
                 SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
-            }, hood));
+            }));
 
         /* INTAKE UP - D-Pad Right (hold for 20% power) */
         new Trigger(() -> driver2.getPOV() == 90)
@@ -359,17 +380,38 @@ public class RobotContainer {
             )
         );
 
-        /* Shooter Control - Right Trigger (speed based on hood preset) */
+        /* Shooter Control - Right Trigger (speed based on hood preset, shooter motors only) */
         new Trigger(() -> driver2.getRightTriggerAxis() > 0.1)
-            .whileTrue(createShootCommandForPreset());
+            .whileTrue(new StartEndCommand(
+                () -> setShooterForPreset(),
+                () -> shooter.stop(),
+                shooter
+            ));
 
-        /* Operator Right Bumper - Shoot with hood at 70, RPM 4700, no feeder delay */
+        /* Driver2 Right Bumper - Shooter at 50%, then feeders+track at 75% after 2 seconds */
         operatorRightBumper.whileTrue(
-            Commands.deferredProxy(() -> {
-                hood.setPosition(70);
-                return new ShootCommand(shooter, flywheel, intake,
-                    () -> shooter.setRPM(4700), 4700, 200, 0);
-            })
+            Commands.parallel(
+                // Start shooter motors at 50% immediately
+                new StartEndCommand(
+                    () -> shooter.setPercentOutput(0.5),
+                    () -> shooter.stopAll(),
+                    shooter
+                ),
+                // Wait 2 seconds, then start feeders and track at 75%
+                Commands.sequence(
+                    Commands.waitSeconds(2.0),
+                    new StartEndCommand(
+                        () -> {
+                            shooter.runFeeder(0.75);
+                            flywheel.setPercent2(-0.75);
+                        },
+                        () -> {
+                            shooter.runFeeder(0);
+                            flywheel.setPercent2(0);
+                        }
+                    )
+                )
+            )
         );
 
         /* ===== SINGLE CONTROLLER (port 5) ===== */
@@ -473,29 +515,33 @@ public class RobotContainer {
     /** True after odometry has been seeded with the first valid vision pose. */
     private boolean visionInitialized = false;
 
+    private void processVisionMeasurement(Limelight ll) {
+        final Pose2d currentRobotPose = swerve.getPose();
+
+        // Pass current angular velocity so Limelight can filter fast-spin estimates
+        ll.setAngularVelocity(swerve.getAngularVelocityDegS());
+
+        ll.getMeasurement(currentRobotPose).ifPresent(m -> {
+            // On the first valid vision reading, hard-reset odometry so the
+            // pose estimator starts at the correct field position instead of (0,0).
+            if (!visionInitialized) {
+                swerve.resetPose(m.poseEstimate.pose);
+                visionInitialized = true;
+            }
+
+            swerve.addVisionMeasurement(
+                m.poseEstimate.pose,
+                m.poseEstimate.timestampSeconds,
+                m.standardDeviations
+            );
+        });
+    }
+
     private Command updateVisionCommand() {
-        return limelight.run(() -> {
-            final Pose2d currentRobotPose = swerve.getPose();
-
-            // Pass current angular velocity so Limelight can filter fast-spin estimates
-            limelight.setAngularVelocity(swerve.getAngularVelocityDegS());
-
-            final Optional<Limelight.Measurement> measurement = limelight.getMeasurement(currentRobotPose);
-            measurement.ifPresent(m -> {
-                // On the first valid vision reading, hard-reset odometry so the
-                // pose estimator starts at the correct field position instead of (0,0).
-                if (!visionInitialized) {
-                    swerve.resetPose(m.poseEstimate.pose);
-                    visionInitialized = true;
-                }
-
-                swerve.addVisionMeasurement(
-                    m.poseEstimate.pose,
-                    m.poseEstimate.timestampSeconds,
-                    m.standardDeviations
-                );
-            });
-        }).ignoringDisable(true);
+        return Commands.run(() -> {
+            processVisionMeasurement(limelight);
+            processVisionMeasurement(limelightLeft);
+        }, limelight, limelightLeft).ignoringDisable(true);
     }
 
     /**

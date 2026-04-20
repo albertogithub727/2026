@@ -31,8 +31,8 @@ import frc.robot.Ports;
 public class Shooter extends SubsystemBase {
     private static final AngularVelocity kVelocityTolerance = RPM.of(100);
 
-    private final TalonFX leftMotor, middleMotor, rightMotor;
-    private final TalonFX feeder;
+    private final TalonFX leftMotor, middleMotor, rightMotor, fourthMotor;
+    private final TalonFX feeder, feeder2;
     private final List<TalonFX> shooterMotors;
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
     private final VoltageOut voltageRequest = new VoltageOut(0);
@@ -44,13 +44,17 @@ public class Shooter extends SubsystemBase {
         leftMotor = new TalonFX(Ports.kShooterLeft);
         middleMotor = new TalonFX(Ports.kShooterMiddle);
         rightMotor = new TalonFX(Ports.kShooterRight);
+        fourthMotor = new TalonFX(Ports.kShooterFourth);
         feeder = new TalonFX(Ports.kShooterFeeder);
-        shooterMotors = List.of(leftMotor, middleMotor, rightMotor);
+        feeder2 = new TalonFX(Ports.kShooterFeeder2);
+        shooterMotors = List.of(leftMotor, middleMotor, rightMotor, fourthMotor);
 
         configureShooterMotor(leftMotor, InvertedValue.Clockwise_Positive);
         configureShooterMotor(middleMotor, InvertedValue.CounterClockwise_Positive);
         configureShooterMotor(rightMotor, InvertedValue.CounterClockwise_Positive);
-        configureFeederMotor();
+        configureShooterMotor(fourthMotor, InvertedValue.Clockwise_Positive);
+        configureFeederMotor(feeder, Constants.Shooter.feederInvert);
+        configureFeederMotor(feeder2, Constants.Shooter.feeder2Invert);
 
         SmartDashboard.putData(this);
     }
@@ -80,11 +84,11 @@ public class Shooter extends SubsystemBase {
         motor.getConfigurator().apply(config);
     }
 
-    private void configureFeederMotor() {
+    private void configureFeederMotor(TalonFX motor, InvertedValue invert) {
         final TalonFXConfiguration config = new TalonFXConfiguration()
             .withMotorOutput(
                 new MotorOutputConfigs()
-                    .withInverted(Constants.Shooter.feederInvert)
+                    .withInverted(invert)
                     .withNeutralMode(NeutralModeValue.Coast)
             )
             .withCurrentLimits(
@@ -95,7 +99,7 @@ public class Shooter extends SubsystemBase {
                     .withSupplyCurrentLimitEnable(true)
             );
 
-        feeder.getConfigurator().apply(config);
+        motor.getConfigurator().apply(config);
     }
 
     public void setRPM(double rpm) {
@@ -112,6 +116,7 @@ public class Shooter extends SubsystemBase {
 
     public void runFeeder(double speed) {
         feeder.setControl(feederDutyCycle.withOutput(speed));
+        feeder2.setControl(feederDutyCycle.withOutput(speed));
     }
 
     public void stop() {
@@ -130,6 +135,12 @@ public class Shooter extends SubsystemBase {
 
     public Command dashboardSpinUpCommand() {
         return defer(() -> spinUpCommand(dashboardTargetRPM));
+    }
+
+    /** Returns true if any shooter motor is spinning above 100 RPM */
+    public boolean isActive() {
+        return shooterMotors.stream().anyMatch(motor ->
+            Math.abs(motor.getVelocity().getValue().in(RPM)) > 100);
     }
 
     public boolean isVelocityWithinTolerance() {
@@ -152,6 +163,7 @@ public class Shooter extends SubsystemBase {
         initSendable(builder, leftMotor, "Left");
         initSendable(builder, middleMotor, "Middle");
         initSendable(builder, rightMotor, "Right");
+        initSendable(builder, fourthMotor, "Fourth");
         builder.addStringProperty("Command", () -> getCurrentCommand() != null ? getCurrentCommand().getName() : "null", null);
         builder.addDoubleProperty("Dashboard RPM", () -> dashboardTargetRPM, value -> dashboardTargetRPM = value);
         builder.addDoubleProperty("Target RPM", () -> velocityRequest.getVelocityMeasure().in(RPM), null);

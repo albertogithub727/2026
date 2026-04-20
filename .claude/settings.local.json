@@ -21,7 +21,8 @@
       "Bash(jar:*)",
       "Bash(unzip:*)",
       "Bash(javap:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(./gradlew.bat build:*)"
     ]
   }
 }

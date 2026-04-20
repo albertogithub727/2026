@@ -11,8 +11,8 @@ public class MoveActuator extends Command {
     private final Hood actuator;
     private final boolean extending; // true = extend, false = retract
     
-    // How much to change position per cycle (2mm per 20ms)
-    private static final double POSITION_INCREMENT_MM = 2.0;
+    // How much to change position per cycle (0.01 rotations per 20ms)
+    private static final double POSITION_INCREMENT_ROTATIONS = 0.01;
     
     private double targetPosition;
     
@@ -37,12 +37,12 @@ public class MoveActuator extends Command {
     @Override
     public void execute() {
         if (extending) {
-            targetPosition += POSITION_INCREMENT_MM;
+            targetPosition += POSITION_INCREMENT_ROTATIONS;
             if (targetPosition > actuator.getMaxPosition()) {
                 targetPosition = actuator.getMaxPosition();
             }
         } else {
-            targetPosition -= POSITION_INCREMENT_MM;
+            targetPosition -= POSITION_INCREMENT_ROTATIONS;
             if (targetPosition < actuator.getMinPosition()) {
                 targetPosition = actuator.getMinPosition();
             }
@@ -53,7 +53,7 @@ public class MoveActuator extends Command {
 
     @Override
     public void end(boolean interrupted) {
-        System.out.println("MoveActuator stopped at position: " + targetPosition + " mm");
+        System.out.println("MoveActuator stopped at position: " + targetPosition + " rotations");
         actuator.setPosition(targetPosition);
     }
 

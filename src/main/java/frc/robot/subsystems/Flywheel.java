@@ -18,7 +18,7 @@ import frc.robot.Constants;
 
 public class Flywheel extends SubsystemBase {
     private static final double MOTOR1_MIN_POSITION = 0.0;
-    private static final double MOTOR1_MAX_POSITION = 15.0;
+    private static final double MOTOR1_MAX_POSITION = 16.0;
 
     private final TalonFX flywheelMotor;
     private final TalonFX flywheelMotor2;

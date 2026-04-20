@@ -16,7 +16,7 @@ public class Intake extends SubsystemBase {
     private final TalonFX intakeMotorFollower;
     private final DutyCycleOut dutyCycleControl = new DutyCycleOut(0);
 
-    private static final int INTAKE_MOTOR_ID = 11;
+    private static final int INTAKE_MOTOR_ID = 21;
     private static final int INTAKE_FOLLOWER_ID = 20;
 
     private static final InvertedValue MOTOR_INVERT = InvertedValue.CounterClockwise_Positive;

@@ -40,6 +40,10 @@ public class Swerve extends SubsystemBase {
     private final Field2d field;
     private boolean agitating = false;
 
+    /** Offset applied only to field-centric driving so the driver can "zero" forward
+     *  without affecting the pose estimator or Limelight values. */
+    private Rotation2d driverHeadingOffset = new Rotation2d();
+
     /* AdvantageScope 3D field publishers */
     private final StructPublisher<Pose3d> robotPose3dPublisher;
     private final StructPublisher<Pose2d> robotPose2dPublisher;
@@ -152,7 +156,7 @@ public class Swerve extends SubsystemBase {
                     translation.getX(),
                     translation.getY(),
                     rotation,
-                    getGyroYaw())
+                    getHeading().minus(driverHeadingOffset))
                 : new ChassisSpeeds(
                     translation.getX(), 
                     translation.getY(), 
@@ -278,10 +282,12 @@ public class Swerve extends SubsystemBase {
     }
 
     /**
-     * Zero the gyro.
+     * Zero the driver's heading for field-centric driving.
+     * Only affects joystick control — the pose estimator and Limelight
+     * values are completely untouched.
      */
     public void zeroGyro() {
-        gyro.setYaw(0);
+        driverHeadingOffset = getHeading();
     }
 
     /**

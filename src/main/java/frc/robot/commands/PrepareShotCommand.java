@@ -33,15 +33,16 @@ public class PrepareShotCommand extends Command {
 
     static {
         // Distance-based RPM and hood position lookup table
+        // Hood positions are now in rotations (motor rotations, not mm)
         // TODO: Tune these values on the actual field by measuring shots at known distances
-        distanceToShotMap.put(Inches.of(36.0),  new Shot(2340, 5));   // Very close - low RPM, hood nearly flat
-        distanceToShotMap.put(Inches.of(52.0),  new Shot(3300, 10));    // Close range
-        distanceToShotMap.put(Inches.of(78.0),  new Shot(3600, 18)); // Short-mid range
-        distanceToShotMap.put(Inches.of(114.4), new Shot(3850, 26)); // Mid range (original)
-        distanceToShotMap.put(Inches.of(140.0), new Shot(3900, 30));   // Mid-far range
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4000, 33)); // Far range (original)
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4100, 35)); // Very far
-        distanceToShotMap.put(Inches.of(240.0), new Shot(4150, 40)); // Maximum practical range
+        distanceToShotMap.put(Inches.of(36.0),  new Shot(2340, 0.03));  // Very close - low RPM, hood nearly flat
+        distanceToShotMap.put(Inches.of(52.0),  new Shot(3300, 0.06));  // Close range
+        distanceToShotMap.put(Inches.of(78.0),  new Shot(3600, 0.11));  // Short-mid range
+        distanceToShotMap.put(Inches.of(114.4), new Shot(3850, 0.16));  // Mid range (original)
+        distanceToShotMap.put(Inches.of(140.0), new Shot(3900, 0.18));  // Mid-far range
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4000, 0.20));  // Far range (original)
+        distanceToShotMap.put(Inches.of(200.0), new Shot(4100, 0.22));  // Very far
+        distanceToShotMap.put(Inches.of(240.0), new Shot(4150, 0.25));  // Maximum practical range
     }
 
     private final Shooter shooter;
@@ -56,7 +57,7 @@ public class PrepareShotCommand extends Command {
     }
 
     public boolean isReadyToShoot() {
-        return hood.isPositionWithinTolerance() && shooter.isVelocityWithinTolerance();
+        return hood.isAtTarget() && shooter.isVelocityWithinTolerance();
     }
 
     private Distance getDistanceToHub() {

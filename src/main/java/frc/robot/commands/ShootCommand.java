@@ -71,12 +71,11 @@ public class ShootCommand extends Command {
             flywheel.setVelocity2(-6000);
             intake.intake2();
 
-            // Oscillate intake arm up and down (like D-pad up/down)
-            int cycleIndex = (int) (timeSinceFeeder / Constants.Shooter.intakeArmOscillateInterval);
-            if (cycleIndex % 2 == 0) {
+            // Move intake arm up briefly to help feed balls
+            if (elapsed >= 3.0 && elapsed < 4.0) {
                 flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp);
             } else {
-                flywheel.setPercent1(Constants.Shooter.intakeArmOscillateSpeedDown);
+                flywheel.setPercent1(0);
             }
         }
     }

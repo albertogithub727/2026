@@ -32,17 +32,18 @@ public class PrepareShotCommand extends Command {
     );
 
     static {
-        // Distance-based RPM and hood position lookup table
+        // Distance-based percent output and hood position lookup table
         // Hood positions are now in rotations (motor rotations, not mm)
+        // Shooter speed is percent output (0.0 to 1.0)
         // TODO: Tune these values on the actual field by measuring shots at known distances
-        distanceToShotMap.put(Inches.of(36.0),  new Shot(2340, 0.03));  // Very close - low RPM, hood nearly flat
-        distanceToShotMap.put(Inches.of(52.0),  new Shot(3300, 0.06));  // Close range
-        distanceToShotMap.put(Inches.of(78.0),  new Shot(3600, 0.11));  // Short-mid range
-        distanceToShotMap.put(Inches.of(114.4), new Shot(3850, 0.16));  // Mid range (original)
-        distanceToShotMap.put(Inches.of(140.0), new Shot(3900, 0.18));  // Mid-far range
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4000, 0.20));  // Far range (original)
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4100, 0.22));  // Very far
-        distanceToShotMap.put(Inches.of(240.0), new Shot(4150, 0.25));  // Maximum practical range
+        distanceToShotMap.put(Inches.of(36.0),  new Shot(0.30, -1));  // Very close - low power, hood nearly flat
+        distanceToShotMap.put(Inches.of(52.0),  new Shot(0.35, -1.3));  // Close range
+        distanceToShotMap.put(Inches.of(78.0),  new Shot(0.40, -1.8));  // Short-mid range
+        distanceToShotMap.put(Inches.of(114.4), new Shot(0.43, -2));  // Mid range (original)
+        distanceToShotMap.put(Inches.of(140.0), new Shot(0.48, -2.2));  // Mid-far range
+        distanceToShotMap.put(Inches.of(165.5), new Shot(0.54, -2.5));  // Far range (original)
+        distanceToShotMap.put(Inches.of(200.0), new Shot(0.52, -2.8));  // Very far
+        distanceToShotMap.put(Inches.of(240.0), new Shot(0.60, -3.2));  // Maximum practical range
     }
 
     private final Shooter shooter;
@@ -57,7 +58,20 @@ public class PrepareShotCommand extends Command {
     }
 
     public boolean isReadyToShoot() {
-        return hood.isAtTarget() && shooter.isVelocityWithinTolerance();
+        // In percent output mode, we just check hood position
+        // Could add a delay timer here if needed for shooter spin-up
+        return hood.isAtTarget();
+    }
+
+    private static String getDistanceLabel(double inches) {
+        if (inches < 44)   return "Very close (36in)";
+        if (inches < 65)   return "Close (52in)";
+        if (inches < 96)   return "Short-mid (78in)";
+        if (inches < 127)  return "Mid (114in)";
+        if (inches < 153)  return "Mid-far (140in)";
+        if (inches < 183)  return "Far (166in)";
+        if (inches < 220)  return "Very far (200in)";
+        return "Max range (240in)";
     }
 
     private Distance getDistanceToHub() {
@@ -70,11 +84,15 @@ public class PrepareShotCommand extends Command {
     public void execute() {
         final Distance distanceToHub = getDistanceToHub();
         final Shot shot = distanceToShotMap.get(distanceToHub);
-        shooter.setRPM(shot.shooterSpeed);
+
+        // Set shooter speed directly based on distance (no ramping)
+        shooter.setPercentOutput(shot.shooterSpeed);
         hood.setPosition(shot.hoodPosition);
 
-        SmartDashboard.putNumber("Auto Shot/Distance (in)", distanceToHub.in(Inches));
-        SmartDashboard.putNumber("Auto Shot/Target RPM", shot.shooterSpeed);
+        double distInches = distanceToHub.in(Inches);
+        SmartDashboard.putNumber("Auto Shot/Distance (in)", distInches);
+        SmartDashboard.putString("Auto Shot/Range", getDistanceLabel(distInches));
+        SmartDashboard.putNumber("Auto Shot/Shooter Percent", shot.shooterSpeed * 100);
         SmartDashboard.putNumber("Auto Shot/Hood Position", shot.hoodPosition);
         SmartDashboard.putBoolean("Auto Shot/Ready", isReadyToShoot());
     }

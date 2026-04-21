@@ -141,7 +141,7 @@ public final class Constants {
 
         /* Shooter Speed */
         public static final double shooterSpeed = 0.5; // duty cycle for reverse/unjam
-        public static final double shooterRPM = 3400; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
+        public static final double shooterRPM = 4600; // closed-loop RPM for hood preset 0.32 (uses Slot0 PID)
         public static final double autoShooterRPM = 3050; // slightly slower RPM for autonomous
         public static final double shooterSpeedHoodDown = 0.0; // duty cycle for hood preset 0
         public static final double shooterSpeedHoodUp = 0.0; // duty cycle for hood preset 1
@@ -161,8 +161,8 @@ public final class Constants {
 
         /* Intake arm oscillation during shooting (flywheel motor 1) */
         public static final double intakeArmOscillateSpeedUp = 0.16 ; // percent output for arm up (stronger – fighting gravity)
-        public static final double intakeArmOscillateSpeedDown = 0.13; // percent output for arm down
-        public static final double intakeArmOscillateInterval = 0.38; // seconds per direction switch
+        public static final double intakeArmOscillateSpeedDown = 0.0; // percent output for arm down
+        public static final double intakeArmOscillateInterval = 20; // seconds per direction switch
 
     }
 
@@ -225,16 +225,16 @@ public final class Constants {
         public static final double kD = 0.0;
         public static final double kS = 0.0; // Static friction compensation
         public static final double kV = 0.0; // Velocity feedforward
-        public static final double kG = 0.0; // Gravity feedforward
+        public static final double kG = 0.8; // Gravity feedforward - counteracts hood dropping
 
         /* Motion Magic Parameters */
         public static final double motionMagicCruiseVelocity = 20; // rotations per second
-        public static final double motionMagicAcceleration = 40; // rotations per second^2
+        public static final double motionMagicAcceleration = 100; // rotations per second^2
         public static final double motionMagicJerk = 200; // rotations per second^3
 
         /* Position Limits (in rotations) */
-        public static final double minPosition = 0.0; // Fully down
-        public static final double maxPosition = 5.0; // Fully up (adjust based on mechanism)
+        public static final double minPosition = -5.0; // Fully down
+        public static final double maxPosition = 5; // Fully up (adjust based on mechanism)
 
         /* Position Tolerance (rotations) */
         public static final double positionTolerance = 0.01;

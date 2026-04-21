@@ -89,6 +89,12 @@ public class Hood extends SubsystemBase {
         return Constants.Hood.minPosition;
     }
 
+    /** Zeros the internal encoder position without moving the motor */
+public void zeroEncoder() {
+    motor.setPosition(0);
+    targetPositionRotations = 0;
+}
+
     public double getMaxPosition() {
         return Constants.Hood.maxPosition;
     }

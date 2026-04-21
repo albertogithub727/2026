@@ -52,7 +52,7 @@ public class AimAndDriveCommand extends Command {
 
         Translation2d hubPosition = Landmarks.hubPosition();
         Translation2d robotPosition = swerve.getPose().getTranslation();
-        Rotation2d targetAngle = hubPosition.minus(robotPosition).getAngle();
+        Rotation2d targetAngle = hubPosition.minus(robotPosition).getAngle().plus(Rotation2d.fromDegrees(180));
         Rotation2d currentAngle = swerve.getHeading();
 
         double rotationOutput = rotationPID.calculate(

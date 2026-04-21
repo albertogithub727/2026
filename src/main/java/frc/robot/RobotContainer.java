@@ -5,31 +5,27 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.AimAndDriveCommand;
 import frc.robot.commands.MoveActuator;
 import frc.robot.commands.PrepareShotCommand;
 import frc.robot.commands.ShootCommand;
-import frc.robot.commands.TeleopSwerve;
 import frc.robot.commands.ShooterTuningCommand;
+import frc.robot.commands.TeleopSwerve;
 import frc.robot.subsystems.Flywheel;
-import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Hood;
+import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Limelight;
 import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.Swerve;
@@ -83,7 +79,7 @@ public class RobotContainer {
     // private final JoystickButton singleAutoShoot = new JoystickButton(singleController, XboxController.Button.kStart.value);
 
     /* Hood Presets (in rotations) */
-    private final double[] hoodPresets = {0.0, 1, 2, 3};
+    private final double[] hoodPresets = {0.0, -2, -3, -3.5};
     private int hoodPresetIndex = 0;
     private double currentShooterRPM = 0; // Track current RPM for boost calculation
     private final Timer strafeOscillateTimer = new Timer();
@@ -103,17 +99,17 @@ public class RobotContainer {
     /** The container for the robot. Contains subsystems, OI devices, and commands. */
     public RobotContainer() {
         SignalLogger.enableAutoLogging(false);
-        swerve.setDefaultCommand(
-            new TeleopSwerve(
-                swerve,
-                () -> -driver.getRawAxis(translationAxis),
-                () -> -driver.getRawAxis(strafeAxis)
-                    + (driver.getLeftBumperButton() ? -0.2 : 0) + (driver.getRightBumperButton() ? 0.2 : 0)
-                    + getStrafeOscillation(),
-                () -> -driver.getRawAxis(rotationAxis),
-                () -> robotCentric.getAsBoolean()
-            )
-        );
+     swerve.setDefaultCommand(
+    new TeleopSwerve(
+        swerve,
+        () -> driver.getRawAxis(translationAxis),   // removed the negative
+        () -> driver.getRawAxis(strafeAxis)          // removed the negative
+            + (driver.getLeftBumperButton() ? -0.2 : 0) + (driver.getRightBumperButton() ? 0.2 : 0)
+            + getStrafeOscillation(),
+        () -> -driver.getRawAxis(rotationAxis),
+        () -> robotCentric.getAsBoolean()
+    )
+);
 
 
         limelight.setDefaultCommand(updateVisionCommand());
@@ -294,14 +290,56 @@ public class RobotContainer {
             strafeOscillateTimer.stop();
         }));
 
-        /* Aim and Drive - Hold A to auto-aim at hub while driving */
-        aimButton.whileTrue(new AimAndDriveCommand(
-            swerve,
-            () -> -driver.getRawAxis(translationAxis),
-            () -> -driver.getRawAxis(strafeAxis)
-        ));
+        /* Aim and Drive + Shoot - Hold A to auto-aim at hub, distance-based RPM/hood, then feed */
+        aimButton.whileTrue(
+            Commands.parallel(
+                new AimAndDriveCommand(swerve,
+                    () -> -driver.getRawAxis(translationAxis),
+                    () -> -driver.getRawAxis(strafeAxis)),
+                new PrepareShotCommand(shooter, hood, swerve::getPose),
+                Commands.sequence(
+                    Commands.waitSeconds(2.0),
+                    new StartEndCommand(
+                        () -> {
+                            shooter.runFeeder(0.75);
+                            flywheel.setPercent2(-0.75);
+                        },
+                        () -> {
+                            shooter.runFeeder(0);
+                            flywheel.setPercent2(0);
+                        }
+                    )
+                ),
+                Commands.sequence(
+                    Commands.waitSeconds(3.0),
+                    new InstantCommand(() -> flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp)),
+                    Commands.waitSeconds(1.0),
+                    new InstantCommand(() -> flywheel.setPercent1(0))
+                )
+            )
+        );
 
         /* Bumpers now used for strafing (added to default swerve command strafe supplier) */
+
+        /* Driver D-Pad Up - Next hood preset */
+        new Trigger(() -> driver.getPOV() == 0)
+            .onTrue(new InstantCommand(() -> {
+                if (hoodPresetIndex < hoodPresets.length - 1) {
+                    hoodPresetIndex++;
+                }
+                hood.setPosition(hoodPresets[hoodPresetIndex]);
+                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
+            }, hood));
+
+        /* Driver D-Pad Down - Previous hood preset */
+        new Trigger(() -> driver.getPOV() == 180)
+            .onTrue(new InstantCommand(() -> {
+                if (hoodPresetIndex > 0) {
+                    hoodPresetIndex--;
+                }
+                hood.setPosition(hoodPresets[hoodPresetIndex]);
+                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
+            }, hood));
 
         /* Intake Control - Left Trigger (both motors) */
         new Trigger(() -> driver2.getLeftTriggerAxis() > 0.1)
@@ -317,22 +355,26 @@ public class RobotContainer {
             ));
 
         /* Hood Preset Up - D-Pad Up */
-        new Trigger(() -> driver2.getPOV() == 0)
-            .onTrue(new InstantCommand(() -> {
-                if (hoodPresetIndex < hoodPresets.length - 1) {
-                    hoodPresetIndex++;
-                }
-                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
-            }));
+       /* Hood Up - D-Pad Up (hold to move) */
+/* Hood Up - D-Pad Up (hold to move) */
+new Trigger(() -> driver2.getPOV() == 0)
+    .whileTrue(new StartEndCommand(
+        () -> hood.setPercent(-0.2),
+        () -> hood.setPercent(0),
+        hood
+    ));
 
-        /* Hood Preset Down - D-Pad Down */
-        new Trigger(() -> driver2.getPOV() == 180)
-            .onTrue(new InstantCommand(() -> {
-                if (hoodPresetIndex > 0) {
-                    hoodPresetIndex--;
-                }
-                SmartDashboard.putNumber("Hood Preset", hoodPresetIndex);
-            }));
+/* Hood Down - D-Pad Down (hold to move) */
+new Trigger(() -> driver2.getPOV() == 180)
+    .whileTrue(new StartEndCommand(
+        () -> hood.setPercent(0.2),
+        () -> hood.setPercent(0),
+        hood
+    ));
+
+    /* Driver2 Back Button - Zero hood encoder */
+new JoystickButton(driver2, XboxController.Button.kBack.value)
+    .onTrue(new InstantCommand(() -> hood.zeroEncoder(), hood));
 
         /* INTAKE UP - D-Pad Right (hold for 20% power) */
         new Trigger(() -> driver2.getPOV() == 90)
@@ -387,7 +429,7 @@ public class RobotContainer {
                 shooter
             ));
 
-        /* Driver2 Right Bumper - Shooter at 50%, then feeders+track at 75% after 2 seconds */
+        /* Driver2 Right Bumper - Shooter at 50%, feeders+track after 2s, intake arm up at 3s for 1s */
         operatorRightBumper.whileTrue(
             Commands.parallel(
                 // Start shooter motors at 50% immediately
@@ -396,7 +438,7 @@ public class RobotContainer {
                     () -> shooter.stopAll(),
                     shooter
                 ),
-                // Wait 2 seconds, then start feeders and track at 75%
+                // Wait 2 seconds, then start feeders + track
                 Commands.sequence(
                     Commands.waitSeconds(2.0),
                     new StartEndCommand(
@@ -409,6 +451,13 @@ public class RobotContainer {
                             flywheel.setPercent2(0);
                         }
                     )
+                ),
+                // At 3 seconds, move intake arm up for 1 second then stop
+                Commands.sequence(
+                    Commands.waitSeconds(3.0),
+                    new InstantCommand(() -> flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp)),
+                    Commands.waitSeconds(1.0),
+                    new InstantCommand(() -> flywheel.setPercent1(0))
                 )
             )
         );

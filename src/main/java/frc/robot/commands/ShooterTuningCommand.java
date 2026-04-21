@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -58,16 +59,20 @@ public class ShooterTuningCommand extends Command {
     // Step sizes — tweak to match how sensitive your shooter/hood are.
     private static final double RPM_FINE_STEP = 50;
     private static final double RPM_COARSE_STEP = 200;
-    private static final double HOOD_FINE_STEP = 0.01;   // rotations
-    private static final double HOOD_COARSE_STEP = 0.05; // rotations
+    private static final double HOOD_FINE_STEP = -.20;   // rotations
+    private static final double HOOD_COARSE_STEP = -1; // rotations
 
     // Starting values the first time you enter tuning after a reboot.
-    private static final double INITIAL_RPM = 3000;
-    private static final double INITIAL_HOOD = 0.10;
+    private static final double INITIAL_RPM = 2500;
+    private static final double INITIAL_HOOD = -1.5;
 
     // Safety clamps — prevents fat-fingering a motor into next Tuesday.
     private static final double MAX_RPM = 6000;
     private static final double MIN_RPM = 0;
+
+    // RPM/s — limits how fast the velocity setpoint ramps so the PID
+    // doesn't slam full voltage on a cold start.
+    private static final double RPM_RAMP_RATE = 1500;
 
     private final Shooter shooter;
     private final Hood hood;
@@ -77,6 +82,7 @@ public class ShooterTuningCommand extends Command {
     private double currentRPM = INITIAL_RPM;
     private double currentHoodRot = INITIAL_HOOD;
     private boolean initialized = false;
+    private final SlewRateLimiter rpmLimiter = new SlewRateLimiter(RPM_RAMP_RATE);
 
     // Edge-detect state — we track last frame's button state so every press
     // produces exactly one step, no matter how long the button is held.
@@ -124,6 +130,7 @@ public class ShooterTuningCommand extends Command {
         lastRB = ctrl.getRightBumperButton();
         lastStart = ctrl.getStartButton();
 
+        rpmLimiter.reset(0);
         applyOutputs();
         SmartDashboard.putString("Tuning/Status", "ACTIVE");
         System.out.println("[Tuning] Entered. RPM=" + currentRPM
@@ -214,7 +221,7 @@ public class ShooterTuningCommand extends Command {
     }
 
     private void applyOutputs() {
-        shooter.setRPM(currentRPM);
+        shooter.setRPM(rpmLimiter.calculate(currentRPM));
         hood.setPosition(currentHoodRot);
     }
 

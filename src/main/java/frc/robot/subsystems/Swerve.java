@@ -156,8 +156,8 @@ public class Swerve extends SubsystemBase {
                     translation.getX(),
                     translation.getY(),
                     rotation,
-                    getHeading().minus(driverHeadingOffset))
-                : new ChassisSpeeds(
+getHeading().minus(driverHeadingOffset))
+               : new ChassisSpeeds(
                     translation.getX(), 
                     translation.getY(), 
                     rotation)
@@ -286,10 +286,9 @@ public class Swerve extends SubsystemBase {
      * Only affects joystick control — the pose estimator and Limelight
      * values are completely untouched.
      */
-    public void zeroGyro() {
-        driverHeadingOffset = getHeading();
-    }
-
+public void zeroGyro() {
+    driverHeadingOffset = getHeading();
+}
     /**
      * Set the gyro to a specific angle.
      * @param angle The angle to set in degrees

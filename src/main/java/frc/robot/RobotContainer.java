@@ -298,7 +298,7 @@ public class RobotContainer {
                     () -> -driver.getRawAxis(strafeAxis)),
                 new PrepareShotCommand(shooter, hood, swerve::getPose),
                 Commands.sequence(
-                    Commands.waitSeconds(2.0),
+                    Commands.waitSeconds(.8),
                     new StartEndCommand(
                         () -> {
                             shooter.runFeeder(0.75);
@@ -311,10 +311,14 @@ public class RobotContainer {
                     )
                 ),
                 Commands.sequence(
-                    Commands.waitSeconds(3.0),
-                    new InstantCommand(() -> flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp)),
                     Commands.waitSeconds(1.0),
-                    new InstantCommand(() -> flywheel.setPercent1(0))
+                    Commands.repeatingSequence(
+                        new InstantCommand(() -> flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp)),
+                        Commands.waitSeconds(1.0),
+                        new InstantCommand(() -> flywheel.setPercent1(.13)),
+                        Commands.waitSeconds(1.0)
+                    ).finallyDo(() -> flywheel.setPercent1(-.13
+                    ))
                 )
             )
         );

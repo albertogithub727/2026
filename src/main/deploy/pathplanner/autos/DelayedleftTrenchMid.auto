@@ -5,6 +5,12 @@
     "data": {
       "commands": [
         {
+          "type": "wait",
+          "data": {
+            "waitTime": 3.0
+          }
+        },
+        {
           "type": "named",
           "data": {
             "name": "IntakeDown"
@@ -17,45 +23,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "rightTrench1"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "IntakeOn"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "type": "deadline",
-          "data": {
-            "commands": [
-              {
-                "type": "wait",
-                "data": {
-                  "waitTime": 4.0
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": "AimAndShoot"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "type": "deadline",
-          "data": {
-            "commands": [
-              {
-                "type": "path",
-                "data": {
-                  "pathName": "rightTrench2"
+                  "pathName": "leftTrenchtoOpponentHub"
                 }
               },
               {

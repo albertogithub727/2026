@@ -37,7 +37,7 @@ public class RobotContainer {
     /* Controllers */
     private final XboxController driver = new XboxController(0);
     private final XboxController driver2 = new XboxController(1);
-    private final XboxController tuningController = new XboxController(2);
+   // private final XboxController tuningController = new XboxController(2);
 
     // private final XboxController singleController = new XboxController(5);
 
@@ -61,6 +61,9 @@ public class RobotContainer {
     // Aim and Drive - HOLD TO AUTO-AIM
     private final JoystickButton aimButton = new JoystickButton(driver, XboxController.Button.kA.value);
 
+    // Aim and Drive (Fast Oscillation) - HOLD TO AUTO-AIM with faster intake oscillation
+    private final JoystickButton aimButtonFast = new JoystickButton(driver, XboxController.Button.kB.value);
+
     // Hood preset - set both actuators to 0.32
     private final JoystickButton hoodPresetButton = new JoystickButton(driver, XboxController.Button.kX.value);
 
@@ -82,6 +85,8 @@ public class RobotContainer {
     private final double[] hoodPresets = {0.0, -2, -3, -3.5};
     private int hoodPresetIndex = 0;
     private double currentShooterRPM = 0; // Track current RPM for boost calculation
+    private boolean hoodStalled = false;
+    private final Timer hoodStallTimer = new Timer();
     private final Timer strafeOscillateTimer = new Timer();
     private boolean strafeOscillateActive = false;
 
@@ -113,6 +118,33 @@ public class RobotContainer {
 
 
         limelight.setDefaultCommand(updateVisionCommand());
+        hood.setDefaultCommand(new FunctionalCommand(
+            // init: reset stall flag, start timer, and start commanding 0
+            () -> {
+                hoodStalled = false;
+                hoodStallTimer.restart();
+                hood.setPosition(0);
+            },
+            // execute: once stalled, stay stopped; skip stall check for first 0.5s
+            () -> {
+                if (hoodStalled) {
+                    return;
+                }
+                if (hoodStallTimer.hasElapsed(0.5)
+                        && Math.abs(hood.getStatorCurrent()) > 40
+                        && Math.abs(hood.getVelocity()) < 0.5) {
+                    hoodStalled = true;
+                    hood.stop();
+                } else {
+                    hood.setPosition(0);
+                }
+            },
+            // end: stop motor when command is interrupted
+            interrupted -> hood.stop(),
+            // isFinished: never
+            () -> false,
+            hood
+        ));
 
         configureButtonBindings();
         registerNamedCommands();
@@ -134,7 +166,7 @@ public class RobotContainer {
 
         // Intake deploy (up/down)
         NamedCommands.registerCommand("IntakeDown",
-            new InstantCommand(() -> { if (!flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(15.25); }));
+            new InstantCommand(() -> { if (!flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(17.5); }));
         NamedCommands.registerCommand("IntakeUp",
             new InstantCommand(() -> { if (flywheel.isMotor1Extended()) flywheel.toggleMotor1Position(15.25); }));
 
@@ -203,6 +235,12 @@ public class RobotContainer {
             new AimAndDriveCommand(swerve),
             new PrepareShotCommand(shooter, hood, swerve::getPose)));
 
+        // Aim + shoot with feeder and intake oscillation (same as A button)
+        NamedCommands.registerCommand("AimAndShoot", Commands.parallel(
+            new AimAndDriveCommand(swerve),
+            aimAndShootSequence()
+        ));
+
         // Auto-shoot (same as start button) - aim + prepare + feed
         NamedCommands.registerCommand("AutoShoot", Commands.parallel(
             new AimAndDriveCommand(swerve),
@@ -241,11 +279,20 @@ public class RobotContainer {
         /* Driver Buttons */
         zeroGyro.onTrue(new InstantCommand(() -> swerve.zeroGyro()));
 
-        /* B Button - X-lock swerve modules (hold to lock) */
-        new JoystickButton(driver, XboxController.Button.kB.value)
-            .whileTrue(Commands.run(() -> swerve.lockModules(), swerve));
-        
-        /* B Button - Reverse everything (hold to run) */
+        /* B Button - Aim and Shoot (Fast Oscillation) - same as A but faster intake oscillation */
+        aimButtonFast.whileTrue(
+            Commands.parallel(
+                new AimAndDriveCommand(swerve,
+                    () -> -driver.getRawAxis(translationAxis),
+                    () -> -driver.getRawAxis(strafeAxis)),
+                aimAndShootSequenceFast()
+            )
+        );
+
+        /* Set hood to 0.7 when B button is released */
+        aimButtonFast.onFalse(new InstantCommand(() -> hood.setPosition(0.7), hood));
+
+        /* Driver2 B Button - Reverse everything (hold to run) */
         feederButton.whileTrue(new StartEndCommand(
             () -> {
                 shooter.setPercentOutput(-Constants.Shooter.shooterSpeed);
@@ -261,15 +308,15 @@ public class RobotContainer {
             shooter, intake
         ));
 
-        new JoystickButton(tuningController, XboxController.Button.kBack.value)
-    .whileTrue(new ShooterTuningCommand(shooter, hood, swerve, tuningController));
+        /*new JoystickButton(tuningController, XboxController.Button.kBack.value)
+    .whileTrue(new ShooterTuningCommand(shooter, hood, swerve, tuningController));*/
 
-        /* Driver2 Y Button - Hold to run feeder (TESTING) */
+        /* Driver2 Y Button - Intake down fast (75% power) */
         new JoystickButton(driver2, XboxController.Button.kY.value)
             .whileTrue(new StartEndCommand(
-                () -> shooter.runFeeder(-Constants.Shooter.feederSpeed),
-                () -> shooter.runFeeder(0),
-                shooter
+                () -> flywheel.setPercent1(-0.75),
+                () -> flywheel.setPercent1(0),
+                flywheel
             ));
 
         /* Driver2 X Button - Hold to run track motor (motor ID 10) only */
@@ -280,15 +327,37 @@ public class RobotContainer {
                 flywheel
             ));
 
-        /* Driver2 A Button - Hold to strafe side-to-side while shooting */
-        feederButton2.onTrue(new InstantCommand(() -> {
-            strafeOscillateActive = true;
-            strafeOscillateTimer.restart();
-        }));
-        feederButton2.onFalse(new InstantCommand(() -> {
-            strafeOscillateActive = false;
-            strafeOscillateTimer.stop();
-        }));
+        /* Driver2 A Button - Maximum range shot (0.80 shooter, -3.2 hood) with aim and shoot sequence */
+        feederButton2.whileTrue(
+            Commands.parallel(
+                // Fixed shooter and hood (max range shot)
+                new StartEndCommand(
+                    () -> {
+                        shooter.setPercentOutput(0.80);
+                        hood.setPosition(-3.2);
+                    },
+                    () -> {
+                        shooter.stopAll();
+                        hood.setPosition(0.7);
+                    },
+                    shooter, hood
+                ),
+                // Same feeder and intake sequence as aimButton
+                Commands.sequence(
+                    Commands.waitSeconds(.75),
+                    new StartEndCommand(
+                        () -> {
+                            shooter.runFeeder(0.90);
+                            flywheel.setPercent2(-0.90);
+                        },
+                        () -> {
+                            shooter.runFeeder(0);
+                            flywheel.setPercent2(0);
+                        }
+                    )
+                )
+            )
+        );
 
         /* Aim and Drive + Shoot - Hold A to auto-aim at hub, distance-based RPM/hood, then feed */
         aimButton.whileTrue(
@@ -296,32 +365,12 @@ public class RobotContainer {
                 new AimAndDriveCommand(swerve,
                     () -> -driver.getRawAxis(translationAxis),
                     () -> -driver.getRawAxis(strafeAxis)),
-                new PrepareShotCommand(shooter, hood, swerve::getPose),
-                Commands.sequence(
-                    Commands.waitSeconds(.8),
-                    new StartEndCommand(
-                        () -> {
-                            shooter.runFeeder(0.75);
-                            flywheel.setPercent2(-0.75);
-                        },
-                        () -> {
-                            shooter.runFeeder(0);
-                            flywheel.setPercent2(0);
-                        }
-                    )
-                ),
-                Commands.sequence(
-                    Commands.waitSeconds(1.0),
-                    Commands.repeatingSequence(
-                        new InstantCommand(() -> flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp)),
-                        Commands.waitSeconds(1.0),
-                        new InstantCommand(() -> flywheel.setPercent1(.13)),
-                        Commands.waitSeconds(1.0)
-                    ).finallyDo(() -> flywheel.setPercent1(-.13
-                    ))
-                )
+                aimAndShootSequence()
             )
         );
+
+        /* Set hood to 0.7 when A button is released */
+        aimButton.onFalse(new InstantCommand(() -> hood.setPosition(0.7), hood));
 
         /* Bumpers now used for strafing (added to default swerve command strafe supplier) */
 
@@ -433,7 +482,7 @@ new JoystickButton(driver2, XboxController.Button.kBack.value)
                 shooter
             ));
 
-        /* Driver2 Right Bumper - Shooter at 50%, feeders+track after 2s, intake arm up at 3s for 1s */
+        /* Driver2 Right Bumper - Shooter at 50%, feeders+track after .25s */
         operatorRightBumper.whileTrue(
             Commands.parallel(
                 // Start shooter motors at 50% immediately
@@ -442,12 +491,12 @@ new JoystickButton(driver2, XboxController.Button.kBack.value)
                     () -> shooter.stopAll(),
                     shooter
                 ),
-                // Wait 2 seconds, then start feeders + track
+                // Wait .25 seconds, then start feeders + track
                 Commands.sequence(
-                    Commands.waitSeconds(2.0),
+                    Commands.waitSeconds(.25),
                     new StartEndCommand(
                         () -> {
-                            shooter.runFeeder(0.75);
+                            shooter.runFeeder(0.25);
                             flywheel.setPercent2(-0.75);
                         },
                         () -> {
@@ -455,13 +504,6 @@ new JoystickButton(driver2, XboxController.Button.kBack.value)
                             flywheel.setPercent2(0);
                         }
                     )
-                ),
-                // At 3 seconds, move intake arm up for 1 second then stop
-                Commands.sequence(
-                    Commands.waitSeconds(3.0),
-                    new InstantCommand(() -> flywheel.setPercent1(-Constants.Shooter.intakeArmOscillateSpeedUp)),
-                    Commands.waitSeconds(1.0),
-                    new InstantCommand(() -> flywheel.setPercent1(0))
                 )
             )
         );
@@ -536,6 +578,54 @@ new JoystickButton(driver2, XboxController.Button.kBack.value)
      * Does NOT declare shooter/flywheel as requirements so it can run
      * in parallel with PrepareShotCommand.
      */
+    /**
+     * Creates the shared aim-and-shoot sequence: prepare shot, delayed feeder,
+     * and intake arm oscillation. Used by both the A button (teleop) and the
+     * "AimAndShoot" named command (autonomous).
+     */
+    private Command aimAndShootSequence() {
+        return Commands.parallel(
+            new PrepareShotCommand(shooter, hood, swerve::getPose),
+            Commands.sequence(
+                Commands.waitSeconds(.75),
+                new StartEndCommand(
+                    () -> {
+                        shooter.runFeeder(0.90);
+                        flywheel.setPercent2(-0.90);
+                    },
+                    () -> {
+                        shooter.runFeeder(0);
+                        flywheel.setPercent2(0);
+                    }
+                )
+            )
+        );
+    }
+
+    /**
+     * Creates aim-and-shoot sequence with INSTANT intake oscillation.
+     * Same as aimAndShootSequence() but intake arm starts oscillating IMMEDIATELY
+     * instead of waiting 1.7 seconds. Used by the B button.
+     */
+    private Command aimAndShootSequenceFast() {
+        return Commands.parallel(
+            new PrepareShotCommand(shooter, hood, swerve::getPose),
+            Commands.sequence(
+                Commands.waitSeconds(.25),
+                new StartEndCommand(
+                    () -> {
+                        shooter.runFeeder(0.90);
+                        flywheel.setPercent2(-0.90);
+                    },
+                    () -> {
+                        shooter.runFeeder(0);
+                        flywheel.setPercent2(0);
+                    }
+                )
+            )
+        );
+    }
+
     private Command feedAndBopCommand() {
         return new FunctionalCommand(
             // init: start feeder + track

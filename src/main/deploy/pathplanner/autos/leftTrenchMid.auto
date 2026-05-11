@@ -17,7 +17,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "rightTrench1"
+                  "pathName": "leftTrench1"
                 }
               },
               {
@@ -55,7 +55,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "rightTrench2"
+                  "pathName": "leftTrench2"
                 }
               },
               {

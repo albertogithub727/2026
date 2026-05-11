@@ -31,7 +31,7 @@ public class Limelight extends SubsystemBase {
      * pose. Multiple tags are less sensitive to range. 3.5 m is roughly the
      * far side of the NEUTRAL ZONE from the HUB.
      */
-    private static final double MAX_SINGLE_TAG_DIST_M = 3.5;
+    private static final double MAX_SINGLE_TAG_DIST_M = 5;
 
     /**
      * Maximum pose ambiguity for a single-tag pose (0-1).
@@ -152,6 +152,31 @@ public class Limelight extends SubsystemBase {
 
         PoseEstimate mt1 = LimelightHelpers.getBotPoseEstimate_wpiBlue(name);
         SmartDashboard.putNumber(name + "/Tag Count", mt1 != null ? mt1.tagCount : 0);
+
+        // Debug info for AprilTag detection
+        if (mt1 != null && mt1.rawFiducials != null && mt1.rawFiducials.length > 0) {
+            // Show primary tag ID
+            int primaryTagID = (int) mt1.rawFiducials[0].id;
+            SmartDashboard.putNumber(name + "/Primary Tag ID", primaryTagID);
+            SmartDashboard.putNumber(name + "/Primary Tag Dist", mt1.rawFiducials[0].distToCamera);
+            SmartDashboard.putNumber(name + "/Primary Tag Ambiguity", mt1.rawFiducials[0].ambiguity);
+
+            // Show estimated robot pose from vision
+            SmartDashboard.putNumber(name + "/Vision X (m)", mt1.pose.getX());
+            SmartDashboard.putNumber(name + "/Vision Y (m)", mt1.pose.getY());
+            SmartDashboard.putNumber(name + "/Vision Rotation (deg)", mt1.pose.getRotation().getDegrees());
+
+            // Show all detected tag IDs
+            StringBuilder tagIDs = new StringBuilder();
+            for (LimelightHelpers.RawFiducial tag : mt1.rawFiducials) {
+                if (tagIDs.length() > 0) tagIDs.append(", ");
+                tagIDs.append((int)tag.id);
+            }
+            SmartDashboard.putString(name + "/All Tag IDs", tagIDs.toString());
+        } else {
+            SmartDashboard.putNumber(name + "/Primary Tag ID", -1);
+            SmartDashboard.putString(name + "/All Tag IDs", "None");
+        }
     }
 
     public static class Measurement {

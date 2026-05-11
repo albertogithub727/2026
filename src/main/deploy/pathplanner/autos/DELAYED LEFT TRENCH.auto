@@ -5,6 +5,12 @@
     "data": {
       "commands": [
         {
+          "type": "wait",
+          "data": {
+            "waitTime": 7.0
+          }
+        },
+        {
           "type": "named",
           "data": {
             "name": "IntakeDown"
@@ -17,7 +23,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "rightTrench1"
+                  "pathName": "leftTrench1"
                 }
               },
               {
@@ -55,7 +61,7 @@
               {
                 "type": "path",
                 "data": {
-                  "pathName": "rightTrench2"
+                  "pathName": "leftTrench2"
                 }
               },
               {

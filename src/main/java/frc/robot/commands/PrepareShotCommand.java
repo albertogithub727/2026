@@ -37,13 +37,13 @@ public class PrepareShotCommand extends Command {
         // Shooter speed is percent output (0.0 to 1.0)
         // TODO: Tune these values on the actual field by measuring shots at known distances
         distanceToShotMap.put(Inches.of(36.0),  new Shot(0.48, -0));  // Very close - low power, hood nearly flat
-        distanceToShotMap.put(Inches.of(52.0),  new Shot(0.48, -0));  // Close range
-        distanceToShotMap.put(Inches.of(78.0),  new Shot(0.50, -1.8));  // Short-mid range
-        distanceToShotMap.put(Inches.of(114.4), new Shot(0.52, -2));  // Mid range (original)
-        distanceToShotMap.put(Inches.of(140.0), new Shot(0.56, -1.9));  // Mid-far range
-        distanceToShotMap.put(Inches.of(165.5), new Shot(0.60, -2.8));  // Far range (original)
-        distanceToShotMap.put(Inches.of(200.0), new Shot(0.60, -2.8));  // Very far
-        distanceToShotMap.put(Inches.of(240.0), new Shot(0.60, -3.2));  // Maximum practical range
+        distanceToShotMap.put(Inches.of(52.0),  new Shot(0.53, -1.5));  // Close range
+        distanceToShotMap.put(Inches.of(78.0),  new Shot(0.52, -2.1));  // Short-mid range
+        distanceToShotMap.put(Inches.of(114.4), new Shot(0.53, -2));  // Mid range (original)
+        distanceToShotMap.put(Inches.of(140.0), new Shot(0.58, -2.5));  // Mid-far range
+        distanceToShotMap.put(Inches.of(165.5), new Shot(0.61, -2.8));  // Far range (original)
+        distanceToShotMap.put(Inches.of(200.0), new Shot(0.56, -2.8));  // Very far
+        distanceToShotMap.put(Inches.of(240.0), new Shot(0.80, -3.2));  // Maximum practical range
     }
 
     private final Shooter shooter;
@@ -105,6 +105,7 @@ public class PrepareShotCommand extends Command {
     @Override
     public void end(boolean interrupted) {
         shooter.stopAll();
+        hood.setPosition(0);
     }
 
     public static class Shot {

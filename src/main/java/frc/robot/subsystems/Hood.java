@@ -80,6 +80,21 @@ public class Hood extends SubsystemBase {
         return motor.getPosition().getValueAsDouble();
     }
 
+    /** Returns the stator current draw in amps */
+    public double getStatorCurrent() {
+        return motor.getStatorCurrent().getValueAsDouble();
+    }
+
+    /** Returns the motor velocity in rotations per second */
+    public double getVelocity() {
+        return motor.getVelocity().getValueAsDouble();
+    }
+
+    /** Stops the motor (neutral output) */
+    public void stop() {
+        motor.stopMotor();
+    }
+
     /** Returns target hood position in rotations */
     public double getTargetPosition() {
         return targetPositionRotations;
@@ -91,6 +106,7 @@ public class Hood extends SubsystemBase {
 
     /** Zeros the internal encoder position without moving the motor */
 public void zeroEncoder() {
+    stop();  // Stop any active motion control first
     motor.setPosition(0);
     targetPositionRotations = 0;
 }
@@ -134,6 +150,8 @@ public void zeroEncoder() {
         SmartDashboard.putNumber("Hood Position (rot)", getPosition());
         SmartDashboard.putNumber("Hood Target (rot)", targetPositionRotations);
         SmartDashboard.putBoolean("Hood At Target", isAtTarget());
+        SmartDashboard.putNumber("Hood Stator Current (A)", getStatorCurrent());
+        SmartDashboard.putNumber("Hood Velocity (rps)", getVelocity());
     }
 
     @Override

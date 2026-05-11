@@ -38,7 +38,7 @@ public class Landmarks {
 
     // ── 2026 REBUILT Field Dimensions ─────────────────────────────────────────
     public static final double FIELD_LENGTH_IN = 651.2;
-    public static final double FIELD_WIDTH_IN  = 322.7;
+    public static final double FIELD_WIDTH_IN  = 317.7;
 
     // ── Blue HUB Center ───────────────────────────────────────────────────────
     // From the game manual: HUB is at the Robot Starting Line (158.6 in from
@@ -51,8 +51,8 @@ public class Landmarks {
     // NOTE: Your previous values were (182.105, 160.845) and (469.115, 160.845).
     // Those may have been measured/verified by your team — if your auto shots
     // were working, keep those values and ignore the ones below.
-    public static final double BLUE_HUB_X_IN = 176; // ← your team's measured value
-    public static final double BLUE_HUB_Y_IN = 148.845; // ← your team's measured value
+    public static final double BLUE_HUB_X_IN = 182.11; // ← your team's measured value
+    public static final double BLUE_HUB_Y_IN = 158.84; // ← your team's measured value
 
     // ── IMPORTANT: AprilTag Field Map ────────────────────────────────────────
     //
